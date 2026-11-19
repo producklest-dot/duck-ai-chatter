@@ -634,7 +634,60 @@ class Chatter:
         return {"ppv_on": bool(p.get("ppv_on")), "items": p.get("vault", [])}
 
     def send_ppv(self, pid, fid, item_id, message):
+        """Bot proposes a PPV. Never sent here: it goes to the approval queue for a human."""
         self.last_claude = time.time()
+        chk = self._ppv_check(pid, fid, item_id)
+        if chk.get("rejected"):
+            return chk
+        p, item = self.profile(pid), chk["item"]
+        text = re.sub(r"\s+", " ", str(message or "")).strip()[:300] or "made this just for you 😏"
+        key = f"{pid}:{fid}"
+        price = float(item.get("price") or 0)
+        self.state.setdefault("ppv_pending", {})[key] = {
+            "profile_id": str(pid), "profile": p["name"], "fan_id": str(fid), "item_id": str(item_id),
+            "title": item.get("title"), "price": price, "message": text,
+            "incoming": self.state["inbox"].get(key, {}).get("incoming", ""), "at": time.time()}
+        self.state["inbox"].pop(key, None)
+        self.log(f"[{p['name']}] PPV waiting for approval -> fan {fid}: {item.get('title')} ${price:g}")
+        self.tg(f"{p['name']}: PPV waiting for approval - {item.get('title')} ${price:g} for fan {fid}")
+        self.save()
+        return {"ok": True, "queued_for_human_approval": True}
+
+    def _ppv_check(self, pid, fid, item_id):
+        p = self.profile(pid)
+        f = self.fan(pid, str(fid))
+        if not p.get("ppv_on"):
+            return {"rejected": True, "reason": "paid content is off for this model - do not offer"}
+        item = next((x for x in p.get("vault", []) if str(x.get("id")) == str(item_id)), None)
+        if not item:
+            return {"rejected": True, "reason": "unknown item_id - use get_vault"}
+        if f.get("wants_free") or self.is_muted(pid, str(fid)) or self.is_paused(f):
+            return {"rejected": True, "reason": "this fan must not get offers"}
+        if f.get("offers") and not f.get("replied_since_offer", True):
+            return {"rejected": True, "reason": "he has not answered your last offer yet - just chat"}
+        if float(item.get("price") or 0) < 3:
+            return {"rejected": True, "reason": "item has no valid price - ask the agency to fix the vault"}
+        return {"item": item}
+
+    def ppv_pending(self):
+        return sorted(self.state.get("ppv_pending", {}).values(), key=lambda x: x["at"])
+
+    def ppv_decide(self, pid, fid, approve, message=None):
+        key = f"{pid}:{fid}"
+        it = self.state.get("ppv_pending", {}).pop(key, None)
+        if not it:
+            return {"ok": False, "error": "not in queue"}
+        if not approve:
+            self.log(f"[{it['profile']}] PPV skipped by human -> fan {fid}")
+            self.save()
+            return {"ok": True, "skipped": True}
+        r = self._ppv_send(pid, fid, it["item_id"], message if message is not None else it["message"])
+        if r.get("rejected"):
+            self.state["ppv_pending"][key] = it
+            self.save()
+        return r
+
+    def _ppv_send(self, pid, fid, item_id, message):
         p = self.profile(pid)
         fid = str(fid)
         f = self.fan(pid, fid)
@@ -901,6 +954,8 @@ class H(BaseHTTPRequestHandler):
             if u.path == "/api/thumb":
                 img, ctype = C.om().thumbnail(q["profile_id"], q["media_id"])
                 return self.send(200, img, ctype)
+            if u.path == "/api/ppv_pending":
+                return self.send(200, C.ppv_pending())
             if u.path == "/api/vault":
                 return self.send(200, C.vault(q["profile_id"]))
             if u.path == "/api/report":
@@ -945,6 +1000,8 @@ class H(BaseHTTPRequestHandler):
                                                    b.get("buying_intent", False), b.get("wants_free", False)))
             if u.path == "/api/ppv":
                 return self.send(200, C.send_ppv(b["profile_id"], b["fan_id"], b["item_id"], b.get("message", "")))
+            if u.path == "/api/ppv_decide":
+                return self.send(200, C.ppv_decide(b["profile_id"], b["fan_id"], bool(b.get("approve")), b.get("message")))
             if u.path == "/api/vault_import":
                 return self.send(200, C.vault_import(b["profile_id"], b["folder_id"], b.get("name", "Vault"),
                                                      b.get("max_media", 20), b.get("price", 15)))

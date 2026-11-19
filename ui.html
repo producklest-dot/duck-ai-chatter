@@ -118,6 +118,8 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
   <div class="card">
     <h2>Сьогодні</h2><p class="sub">Що бот зробив з півночі.</p>
     <div class="stats" id="stats"></div>
+    <h3 style="margin:22px 0 4px">PPV на підтвердження</h3>
+    <div id="ppvq"></div>
     <h3 style="margin:22px 0 4px">Чекають на відповідь</h3>
     <div id="inbox"></div>
   </div>
@@ -291,8 +293,13 @@ async function refresh(){
   $('log').textContent=(S.log||[]).slice().reverse().join('\n');
   const inb=await get('/api/inbox?limit=20&ui=1');
   $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> <span class="hint">фан ${esc(x.fan_id)}</span><br>${esc(x.incoming)}</div>`).join(''):'<p class="empty">Ніхто не чекає.</p>';
+  const pq=await get('/api/ppv_pending');
+  const ae=document.activeElement;
+  if(!(ae&&ae.classList&&ae.classList.contains('ppvmsg')))
+  $('ppvq').innerHTML=pq.length?pq.map((x,i)=>`<div class="inb"><b>${esc(x.profile)}</b> <span class="hint">фан ${esc(x.fan_id)} · ${esc(x.title)} · $${x.price}</span><br><span class="hint">він: ${esc(x.incoming||'')}</span><br><textarea class="ppvmsg" id="pm${i}" rows="2" style="width:100%">${esc(x.message)}</textarea><br><button class="pri" onclick="ppvGo('${esc(x.profile_id)}','${esc(x.fan_id)}',1,'pm${i}')">Надіслати</button> <button onclick="ppvGo('${esc(x.profile_id)}','${esc(x.fan_id)}',0)">Пропустити</button></div>`).join(''):'<p class="empty">Нічого не чекає.</p>';
   drawChat();
 }
+async function ppvGo(pid,fid,ok,ta){const r=await post('/api/ppv_decide',{profile_id:pid,fan_id:fid,approve:!!ok,message:ta?$(ta).value:undefined});toast(r.rejected?'Не надіслано: '+r.reason:ok?'Надіслано':'Пропущено')}
 const STG={greeting:'привітання',rapport:'знайомство',flirt:'флірт',tease:'тизер'};
 const realP=()=>(CFG.profiles||[]).filter(x=>x.id!=='demo'||true);
 function modelOptions(sel){const v=$(sel).value;$(sel).innerHTML=(CFG.profiles||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(v)$(sel).value=v}
