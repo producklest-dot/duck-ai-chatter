@@ -15,7 +15,7 @@
 :root[data-theme="light"]{
   --bg:#DADBDD;--card:#F4F5F6;--field:#E7E8EA;--side:#EEEFF0;
   --ink:#0A1418;--ink-2:#2B4250;--ink-3:#475D6B;--line:#C1C5C9;
-  --acc:#0070D6;--acc-soft:#D6E8FA;--ok:#0070D6;
+  --acc:#0070D6;--acc-soft:#D6E8FA;--ok:#0070D6;--field:#FFFFFF;
   --grid-line:rgba(116,141,156,.22);--grid-margin:rgba(207,23,23,.38);color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
@@ -47,7 +47,7 @@ main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 48px;
 h2{font:600 28px/1.1 var(--script);margin:0 0 14px;letter-spacing:0}
 .label{font:500 11px var(--mono);color:var(--ink-3);text-transform:none}
 /* controls */
-button{font:500 14px var(--body);color:var(--ink);background:var(--side);border:1px solid var(--line);border-radius:11px;padding:9px 14px;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
+button{font:500 14px var(--body);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:11px;padding:9px 14px;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
 button:hover{border-color:var(--acc)}
 button.pri{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
 button.pri:hover{filter:brightness(1.08)}
