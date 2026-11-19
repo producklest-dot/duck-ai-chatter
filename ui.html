@@ -3,185 +3,232 @@
 <title>DUCK AI Chatter</title><link rel="icon" href="/logo.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Ogonek notebook structure x DUCK TRAFF: monochrome ink, one accent (DUCK blue), red margin = Ogonek signature */
 :root{
   --bg:#0A0D10;--card:#12171C;--field:#0D1115;--side:#161C22;
   --ink:#E8EAEC;--ink-2:#B9C0C6;--ink-3:#7E8A94;--line:#222B33;
   --acc:#0082F3;--acc-soft:rgba(0,130,243,.14);--on-acc:#fff;
-  --red:#CF1717;--red-soft:rgba(207,23,23,.14);--ok:#7FB8EF;
-  --grid-line:rgba(193,197,201,.06);--grid-margin:rgba(240,106,106,.30);--grid:24px;
-  --script:"Inter Tight",system-ui,sans-serif;--mono:"Fira Code",ui-monospace,monospace;--body:"Inter Tight",system-ui,sans-serif;
+  --red:#CF1717;--red-soft:rgba(207,23,23,.14);
+  --grid-line:rgba(193,197,201,.05);--grid-margin:rgba(240,106,106,.28);--grid:24px;
+  --mono:"Fira Code",ui-monospace,monospace;--body:"Inter Tight",system-ui,sans-serif;
   --ease:cubic-bezier(.22,1,.36,1);color-scheme:dark}
 :root[data-theme="light"]{
-  --bg:#DADBDD;--card:#F4F5F6;--field:#E7E8EA;--side:#EEEFF0;
+  --bg:#DADBDD;--card:#F4F5F6;--field:#FFFFFF;--side:#EEEFF0;
   --ink:#0A1418;--ink-2:#2B4250;--ink-3:#475D6B;--line:#C1C5C9;
-  --acc:#0070D6;--acc-soft:#D6E8FA;--ok:#0070D6;--field:#FFFFFF;
-  --grid-line:rgba(116,141,156,.22);--grid-margin:rgba(207,23,23,.38);color-scheme:light}
+  --acc:#0070D6;--acc-soft:#D6E8FA;--grid-line:rgba(116,141,156,.2);--grid-margin:rgba(207,23,23,.35);color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
-body{min-height:100vh}
-::selection{background:var(--acc);color:#fff}
-/* top bar */
-.top{position:sticky;top:0;z-index:5;padding:12px 24px 0;background:linear-gradient(var(--bg) 70%,transparent)}
-.bar{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px 10px 16px}
-.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;letter-spacing:-.01em}
-.logo i{width:38px;height:38px;border-radius:50%;overflow:hidden;display:block;flex:none;box-shadow:0 0 0 2px var(--acc)}.logo i img{width:100%;height:100%;object-fit:cover;transform:scale(1.12);display:block}.logo small{display:block;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase}.logo span{line-height:1.1}
-.logo i::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
+.top{position:sticky;top:0;z-index:5;padding:12px 24px 0;background:linear-gradient(var(--bg) 75%,transparent)}
+.bar{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px}
+.logo img{width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--acc)}
+.logo small{display:block;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.12em}
 .sp{flex:1}
-/* hero */
-.hero{max-width:1240px;margin:22px auto 4px;padding:0 24px}
-.hero h1{font:600 clamp(32px,4vw,46px)/1.05 var(--body);letter-spacing:-.03em;margin:6px 0 0}
-.hero h1 em{font-style:normal;color:var(--acc)}.kicker{display:inline-flex;align-items:center;gap:8px;font:500 12px var(--mono);color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase}.kicker::before{content:"";width:18px;height:2px;background:var(--acc)}
-.hero p{color:var(--ink-3);margin:14px 0 0;max-width:640px}
-/* layout */
-main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 48px;max-width:1288px;margin:0 auto}
-@media(max-width:900px){main{grid-template-columns:1fr;padding:12px 16px 40px}.top{padding:10px 16px 0}.hero{padding:0 16px}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;animation:in .4s var(--ease) both}
-@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.card.paper{background-color:var(--card);
-  background-image:linear-gradient(90deg,transparent calc(100% - 34px),var(--grid-margin) calc(100% - 34px),var(--grid-margin) calc(100% - 32px),transparent calc(100% - 32px)),
-  linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
-  background-size:100% 100%,var(--grid) var(--grid),var(--grid) var(--grid);padding-right:56px}
-@media(max-width:600px){.card.paper{background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:var(--grid) var(--grid);padding-right:24px}}
+nav{max-width:1100px;margin:12px auto 0;display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:transparent;border-color:transparent;color:var(--ink-3)}
+nav button.on{background:var(--card);border-color:var(--line);color:var(--ink)}
+main{max-width:1148px;margin:0 auto;padding:16px 24px 48px}
+@media(max-width:700px){main{padding:12px 16px 40px}.top{padding:10px 16px 0}}
+.tab{display:none;gap:16px;grid-template-columns:1fr 1fr}.tab.on{display:grid}
+@media(max-width:860px){.tab.on{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+.paper{background-image:linear-gradient(90deg,transparent calc(100% - 34px),var(--grid-margin) calc(100% - 34px),var(--grid-margin) calc(100% - 32px),transparent calc(100% - 32px)),linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:100% 100%,var(--grid) var(--grid),var(--grid) var(--grid);padding-right:56px}
 .full{grid-column:1/-1}
-h2{font:600 17px/1.2 var(--body);letter-spacing:-.01em;margin:0 0 14px;display:flex;align-items:center;gap:8px}h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--acc)}
-.label{font:500 11px var(--mono);color:var(--ink-3);text-transform:none}
-/* controls */
-button{font:500 14px var(--body);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:11px;padding:9px 14px;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
+h2{font:600 18px/1.2 var(--body);letter-spacing:-.01em;margin:0 0 6px}
+h3{font:600 15px var(--body);margin:0}
+.sub{color:var(--ink-3);font-size:14px;margin:0 0 16px}
+button{font:500 14px var(--body);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:11px;padding:9px 14px;cursor:pointer;transition:border-color .15s var(--ease)}
 button:hover{border-color:var(--acc)}
 button.pri{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
-button.pri:hover{filter:brightness(1.08)}
+button.big{font-size:15px;padding:11px 22px}
 button.stop{background:transparent;border-color:var(--red);color:var(--red)}
-button.icon{padding:9px 11px}
-input,select,textarea{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:9px 11px;font:inherit;width:100%;transition:border-color .15s var(--ease)}
+input,select,textarea{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font:inherit;width:100%}
+textarea{resize:vertical}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
-label{display:block;color:var(--ink-3);font:500 12px var(--mono);margin:14px 0 6px}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
-.grow{flex:1!important}
-/* status pills */
-.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;font:500 12px var(--mono);border:1px solid var(--line);color:var(--ink-3);background:var(--field)}
-.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
-.pill.on{color:var(--ok);border-color:var(--acc-soft)}.pill.on::before{background:var(--acc);animation:pulse 1.6s infinite}
-.pill.off::before{background:var(--red)}
+label.f{display:block;font-weight:500;margin:16px 0 4px}
+.hint{color:var(--ink-3);font-size:13px;margin:0 0 6px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;font:500 13px var(--body);border:1px solid var(--line);color:var(--ink-2);background:var(--field)}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ink-3)}
+.pill.on::before{background:var(--acc);animation:pulse 1.6s infinite}.pill.off::before{background:var(--red)}
 @keyframes pulse{50%{opacity:.35}}
-/* stats */
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.stats div{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 10px}
-.stats b{display:block;font:500 26px/1 var(--mono);font-variant-numeric:tabular-nums}
-.stats span{color:var(--ink-3);font-size:12px}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px dashed var(--line)}
+.steps li:last-child{border:0}
+.steps .n{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font:500 13px var(--mono);border:1.5px solid var(--line);color:var(--ink-3)}
+.steps li.done .n{background:var(--acc);border-color:var(--acc);color:#fff}
+.steps li.done .n::after{content:"✓"}.steps li.done .n span{display:none}
+.steps .t{flex:1}.steps .t div{color:var(--ink-3);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stats div{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stats b{display:block;font:500 28px/1 var(--mono)}.stats span{color:var(--ink-3);font-size:12px}
 .stats div:nth-child(2) b{color:var(--acc)}
-@media(max-width:600px){.stats{grid-template-columns:repeat(3,1fr)}}
-/* misc */
-.log{font:12px/1.65 var(--mono);max-height:360px;overflow:auto;white-space:pre-wrap;color:var(--ink-2);background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.prof{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
-.prof .row>*{flex:initial}
-.prof b{font-weight:600}
-code{font:12px/1.55 var(--mono);background:var(--field);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:10px;padding:10px 12px;display:block;white-space:pre-wrap;color:var(--ink-2)}
-.muted{color:var(--ink-3);font-size:13px}
+.model{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
+.switch{display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;padding:6px 0}
+.switch input{display:none}
+.switch i{width:38px;height:22px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:background .15s var(--ease)}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s var(--ease)}
+.switch input:checked+i{background:var(--acc)}.switch input:checked+i::after{transform:translateX(16px)}
+.switch.danger input:checked+i{background:var(--red)}
+.tagline{font:500 12px var(--mono);padding:3px 9px;border-radius:99px;background:var(--acc-soft);color:var(--acc)}
+.tagline.live{background:var(--red-soft);color:var(--red)}
+.chat{background:var(--field);border:1px solid var(--line);border-radius:14px;padding:14px;height:380px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.b{max-width:75%;padding:9px 13px;border-radius:14px;font-size:14px}
+.b.fan{align-self:flex-start;background:var(--side);border:1px solid var(--line)}
+.b.me{align-self:flex-end;background:var(--acc);color:#fff}
+.b.sys{align-self:center;background:transparent;color:var(--ink-3);font-size:12px;font-family:var(--mono)}
+.log{font:12px/1.65 var(--mono);max-height:520px;overflow:auto;white-space:pre-wrap;color:var(--ink-2);background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .inb{border-bottom:1px dashed var(--line);padding:10px 0}.inb:last-child{border:0}
-.inb b{font-weight:600}
-.empty{font:500 14px var(--body);color:var(--ink-3);padding:10px 0}
-input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px;vertical-align:-3px;margin-right:6px}
-@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.empty{color:var(--ink-3);padding:6px 0}
+.note{background:var(--acc-soft);border-radius:12px;padding:12px 14px;font-size:14px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
 </style></head><body>
 <div class="top"><div class="bar">
-  <div class="logo"><i><img src="/logo.jpg" alt=""></i><span><small>DUCK TRAFF</small>AI Chatter</span></div>
-  <span id="run" class="pill">stopped</span>
-  <span id="claude" class="pill">Claude: not connected</span>
+  <div class="logo"><img src="/logo.jpg" alt=""><span><small>DUCK TRAFF</small>AI Chatter</span></div>
+  <span id="run" class="pill">Bot is off</span>
+  <span id="claude" class="pill">Claude is not working</span>
   <span class="sp"></span>
-  <button class="icon" id="theme" title="Light / dark">◐</button>
-  <button onclick="post('/api/check_now',{})">Check now</button>
-  <button id="toggle" class="pri">Start</button>
-</div></div>
-<div class="hero"><div class="kicker">DUCK TRAFF · agency tools</div><h1>DUCK <em>AI</em> Chatter</h1><p>The app checks fans, Claude writes the replies, hot leads go to you in Telegram.</p></div>
+  <button id="theme" title="Light / dark">◐</button>
+  <button id="toggle" class="pri big">Turn bot on</button>
+</div>
+<nav id="nav">
+  <button data-t="home" class="on">Home</button><button data-t="models">Models</button>
+  <button data-t="try">Try it</button><button data-t="settings">Settings</button><button data-t="log">Log</button>
+</nav></div>
 <main>
-  <section class="card paper">
-    <h2>Today</h2>
+<section class="tab on" id="t-home">
+  <div class="card paper">
+    <h2>Setup</h2><p class="sub">Five steps. Each turns blue when it is done.</p>
+    <ol class="steps" id="steps"></ol>
+  </div>
+  <div class="card">
+    <h2>Today</h2><p class="sub">What the bot did since midnight.</p>
     <div class="stats" id="stats"></div>
-    <label>Check fans every</label>
-    <select id="poll" onchange="saveCfg({poll_seconds:+this.value})">
-      <option value="30">30 seconds</option><option value="60">1 minute</option>
-      <option value="120">2 minutes</option><option value="300">5 minutes</option></select>
-    <label>Chats checked per pass</label>
-    <input id="fpc" type="number" min="5" max="100" onchange="saveCfg({fans_per_cycle:+this.value})">
-  </section>
-  <section class="card">
-    <h2>Connect to Claude</h2>
-    <div class="muted">1. Add the MCP server once (Terminal):</div>
-    <code id="addcmd"></code>
-    <div class="muted" style="margin-top:10px">2. In a Claude session, start the shift (Claude answers fans from the inbox on this rhythm):</div>
-    <code id="loopcmd"></code>
-    <div class="row" style="margin-top:8px"><button onclick="copy('addcmd')">Copy step 1</button><button onclick="copy('loopcmd')">Copy step 2</button></div>
-  </section>
-  <section class="card full">
-    <div class="row"><h2 class="grow">Models</h2><button onclick="loadAccounts()">Load accounts from OnlyMonster</button></div>
+    <h3 style="margin:22px 0 4px">Waiting for a reply</h3>
+    <div id="inbox"></div>
+  </div>
+</section>
+<section class="tab" id="t-models">
+  <div class="card full">
+    <div class="row"><div style="flex:1"><h2>Models</h2><p class="sub" style="margin:0">Your OnlyFans accounts from OnlyMonster. Turn the bot on per model and give it her voice.</p></div>
+    <button class="pri" onclick="loadAccounts()">Load my models</button></div>
     <div id="profiles"></div>
-  </section>
-  <section class="card paper">
-    <h2>Inbox (waiting for Claude)</h2><div id="inbox" class="muted">empty</div>
-    <h2 style="margin-top:16px">Test without real fans</h2>
-    <div class="muted">Creates a fake fan message for "Demo model". Always test mode - nothing goes to OnlyFans.</div>
-    <div class="row" style="margin-top:8px"><input id="demotxt" class="grow" placeholder="type what the fan says, or leave empty for a random line">
-    <button onclick="post('/api/demo',{text:$('demotxt').value});$('demotxt').value=''">Send fake fan message</button></div>
-  </section>
-  <section class="card">
-    <h2>Keys</h2>
-    <label>OnlyMonster API key</label><input id="om" type="password" placeholder="paste to change">
-    <label>Telegram bot token</label><input id="tgt" type="password" placeholder="paste to change">
-    <label>Telegram chat id</label><input id="tgc">
-    <label>Stop words (comma separated)</label><textarea id="hk" rows="2"></textarea>
-    <div class="row" style="margin-top:10px"><button class="pri" onclick="saveKeys()">Save</button></div>
-  </section>
-  <section class="card full"><h2>Log</h2><div id="log" class="log"></div></section>
+  </div>
+</section>
+<section class="tab" id="t-try">
+  <div class="card">
+    <h2>Try it as a fan</h2><p class="sub">Write like a fan. Claude answers as the Demo model. Nothing goes to OnlyFans.</p>
+    <div class="chat" id="chat"></div>
+    <div class="row" style="margin-top:10px">
+      <input id="demotxt" style="flex:1" placeholder="hey gorgeous, how's your day?" onkeydown="if(event.key==='Enter')sendDemo()">
+      <button class="pri" onclick="sendDemo()">Send</button><button onclick="post('/api/demo',{text:'__reset__'})">New chat</button></div>
+  </div>
+  <div class="card paper">
+    <h2>Good things to test</h2><p class="sub">Click one to send it.</p>
+    <div id="ideas" style="display:flex;flex-direction:column;gap:8px"></div>
+    <p class="note" style="margin-top:18px">Claude answers on its next pass (every minute). Want it right now? Tell Claude in its window: <b>"do a chatter pass"</b>.</p>
+  </div>
+</section>
+<section class="tab" id="t-settings">
+  <div class="card">
+    <h2>Connections</h2>
+    <label class="f">OnlyMonster key</label>
+    <p class="hint">Lets the app read your fans' chats and send replies. OnlyMonster → Dashboard → API.</p>
+    <input id="om" type="password">
+    <label class="f">Telegram alerts</label>
+    <p class="hint">Hot fans and "needs a human" alerts. Bot token from @BotFather, and your chat id.</p>
+    <input id="tgt" type="password" placeholder="Bot token"><input id="tgc" placeholder="Chat id" style="margin-top:8px">
+    <div class="row" style="margin-top:16px"><button class="pri" onclick="saveKeys()">Save</button></div>
+  </div>
+  <div class="card">
+    <h2>Behaviour</h2>
+    <label class="f">Check fans every</label>
+    <select id="poll" onchange="saveCfg({poll_seconds:+this.value}).then(()=>toast('Saved'))">
+      <option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option><option value="300">5 minutes</option></select>
+    <label class="f">Chats checked each time</label>
+    <input id="fpc" type="number" min="5" max="100" onchange="saveCfg({fans_per_cycle:+this.value}).then(()=>toast('Saved'))">
+    <label class="f">Stop words</label>
+    <p class="hint">If a fan writes one of these, the chat goes to a human. Separate with commas.</p>
+    <textarea id="hk" rows="3" onchange="saveCfg({handoff_keywords:this.value.split(',').map(s=>s.trim()).filter(Boolean)}).then(()=>toast('Saved'))"></textarea>
+  </div>
+</section>
+<section class="tab" id="t-log"><div class="card full"><h2>Log</h2><p class="sub">Everything the bot did, newest first.</p><div id="log" class="log"></div></div></section>
 </main>
+<div class="toast" id="toast"></div>
 <script>
-let S={},CFG={},ACC=[];
+let S={},CFG={},SETUP={};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-async function get(u){const r=await fetch(u);return r.json()}
-async function post(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});const j=await r.json();refresh();return j}
+async function get(u){return (await fetch(u)).json()}
+async function post(u,b){const j=await (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();refresh();return j}
 async function saveCfg(b){await post('/api/config',b);CFG=await get('/api/config')}
-function copy(id){navigator.clipboard.writeText($(id).textContent)}
-async function saveKeys(){await saveCfg({om_token:$('om').value,tg_token:$('tgt').value,tg_chat:$('tgc').value,
-  handoff_keywords:$('hk').value.split(',').map(s=>s.trim()).filter(Boolean)});$('om').value='';$('tgt').value='';drawCfg()}
-async function loadAccounts(){const a=await get('/api/accounts');if(a.error){alert(a.error);return}ACC=a;
-  const have=new Set(CFG.profiles.map(p=>String(p.id)));
-  for(const x of a){if(!have.has(String(x.id)))CFG.profiles.push({id:String(x.id),name:x.name||x.username,username:x.username||'',
-    platform_account_id:x.platform_account_id,enabled:false,test_mode:true,tone_file:''})}
-  await saveCfg({profiles:CFG.profiles});drawCfg()}
-function setP(i,k,v){CFG.profiles[i][k]=v;saveCfg({profiles:CFG.profiles}).then(drawCfg)}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
+function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t))}
+$('nav').onclick=e=>{if(e.target.dataset.t)tab(e.target.dataset.t)};
+const SHIFT=()=>`/loop ${+(CFG.poll_seconds||60)<60?'1m':Math.round((CFG.poll_seconds||60)/60)+'m'} Do a DUCK AI Chatter pass with the duck-chatter tools: get_inbox; for each fan read get_voice once per profile, reply with send_reply in her voice following the playbook, or handoff/skip. If the inbox is empty, answer only "inbox empty".`;
+async function copyShift(){await navigator.clipboard.writeText(SHIFT());toast('Copied. Paste it into Claude and press Enter')}
+async function connectClaude(){toast('Connecting…');const r=await post('/api/connect_claude',{});toast(r.ok?'Claude connected. Restart Claude once':'Failed: '+r.error);loadSetup()}
+async function saveKeys(){await saveCfg({om_token:$('om').value,tg_token:$('tgt').value,tg_chat:$('tgc').value});$('om').value='';$('tgt').value='';toast('Saved');drawCfg();loadSetup()}
+async function loadAccounts(){const a=await get('/api/accounts');if(a.error){toast('Add the OnlyMonster key in Settings first');tab('settings');return}
+  const have=new Set(CFG.profiles.map(p=>String(p.id)));let n=0;
+  for(const x of a){if(!have.has(String(x.id))){n++;CFG.profiles.push({id:String(x.id),name:x.name||x.username,username:x.username||'',platform_account_id:x.platform_account_id,enabled:false,test_mode:true,voice:''})}}
+  await saveCfg({profiles:CFG.profiles});toast(n?`Added ${n} models`:'No new models');drawCfg();loadSetup()}
+function setP(i,k,v){CFG.profiles[i][k]=v;saveCfg({profiles:CFG.profiles}).then(()=>{drawCfg();loadSetup();toast('Saved')})}
+function liveSwitch(i,el){const x=CFG.profiles[i];if(el.checked&&!confirm('Real messages will go to '+x.name+"'s fans. Continue?")){el.checked=false;return}setP(i,'test_mode',!el.checked)}
 function drawCfg(){
   $('poll').value=String(CFG.poll_seconds||60);$('fpc').value=CFG.fans_per_cycle||25;$('tgc').value=CFG.tg_chat||'';
   $('hk').value=(CFG.handoff_keywords||[]).join(', ');
-  $('om').placeholder=CFG.om_token?'saved - paste to change':'paste key';$('tgt').placeholder=CFG.tg_token?'saved - paste to change':'paste token';
-  const p=CFG.profiles||[];
-  $('profiles').innerHTML=p.length?p.map((x,i)=>`<div class="prof"><div class="row">
-    <b class="grow">${esc(x.name)} <span class="muted">@${esc(x.username)}</span></b>
-    <label style="margin:0"><input type="checkbox" style="width:auto" ${x.enabled?'checked':''} onchange="setP(${i},'enabled',this.checked)"> Active</label>
-    <label style="margin:0"><input type="checkbox" style="width:auto" ${x.test_mode!==false?'checked':''} onchange="setP(${i},'test_mode',this.checked)"> Test mode (nothing sent)</label></div>
-    <label>Voice file (tone of voice, .txt / .md / .docx full path)</label>
-    <input value="${esc(x.tone_file)}" onchange="setP(${i},'tone_file',this.value)" placeholder="/Users/lest/U/.../tone.md"></div>`).join('')
-    :'<div class="muted">No models yet - save the OnlyMonster key, then "Load accounts".</div>';
-  const add='claude mcp add --scope user duck-chatter -- '+(S.py||'~/Apps/_venvs/duck-chatter/bin/python')+' '+(S.mcp||'~/Apps/duck-ai-chatter/mcp_server.py');
-  $('addcmd').textContent=add;
-  const sec=+(CFG.poll_seconds||60);const iv=sec<60?'1m':Math.round(sec/60)+'m';
-  $('loopcmd').textContent=`/loop ${iv} Run one DUCK AI Chatter pass with the duck-chatter tools: get_inbox; for each fan read get_voice once per profile, reply with send_reply in her voice following the playbook, or handoff/skip. If the inbox is empty, answer only "inbox empty".`;
+  $('om').placeholder=CFG.om_token?'Saved. Paste a new one to change':'Paste key';$('tgt').placeholder=CFG.tg_token?'Saved. Paste a new one to change':'Bot token';
+  const p=(CFG.profiles||[]).map((x,i)=>[x,i]).filter(([x])=>x.id!=='demo');
+  $('profiles').innerHTML=p.length?p.map(([x,i])=>`<div class="model">
+    <div class="row"><h3 style="flex:1">${esc(x.name)} <span class="hint">@${esc(x.username)}</span></h3>
+      <span class="tagline ${x.enabled&&x.test_mode===false?'live':''}">${!x.enabled?'off':x.test_mode===false?'live: writes to fans':'practice'}</span></div>
+    <label class="switch"><input type="checkbox" ${x.enabled?'checked':''} onchange="setP(${i},'enabled',this.checked)"><i></i>Bot works for this model</label>
+    <label class="switch danger"><input type="checkbox" ${x.test_mode===false?'checked':''} onchange="liveSwitch(${i},this)"><i></i>Send to real fans (off = practice, replies only in the log)</label>
+    <label class="f">Her voice</label><p class="hint">How she texts: character, words she uses, emojis, what she never says. Paste it here.</p>
+    <textarea rows="5" onchange="setP(${i},'voice',this.value)" placeholder="I'm Mia, 24, playful and a bit shy…">${esc(x.voice||'')}</textarea></div>`).join('')
+    :'<p class="empty">No models yet. Add the OnlyMonster key in Settings, then press "Load my models".</p>';
+}
+function drawSetup(){
+  const s=SETUP,list=[
+    [s.onlymonster,'Connect OnlyMonster','So the app can read and answer chats.',`<button onclick="tab('settings')">Add key</button>`],
+    [s.active>0,'Choose models',s.models?`${s.active} of ${s.models} turned on`:'Load your models and turn the bot on.',`<button onclick="tab('models')">Models</button>`],
+    [s.voice,'Give each model her voice','Claude texts like her.',`<button onclick="tab('models')">Add voice</button>`],
+    [s.claude_connected,'Connect Claude','One click. Then restart Claude once.',`<button class="pri" onclick="connectClaude()">Connect</button>`],
+    [s.claude_working,"Start Claude's shift",'Copy the command, paste it into Claude. It answers fans every minute.',`<button class="pri" onclick="copyShift()">Copy command</button>`]];
+  $('steps').innerHTML=list.map(([ok,t,d,b],k)=>`<li class="${ok?'done':''}"><span class="n"><span>${k+1}</span></span><div class="t">${t}<div>${d}</div></div>${ok&&k<4?'':b}</li>`).join('')
+    +(s.telegram?'':`<li><span class="n"><span>+</span></span><div class="t">Telegram alerts (optional)<div>Get hot fans on your phone.</div></div><button onclick="tab('settings')">Set up</button></li>`);
+}
+async function loadSetup(){SETUP=await get('/api/setup');drawSetup()}
+const IDEAS=["hey gorgeous, how's your day?","where are you from?","how much for a video?","are you a real person or a bot?","can you send me something for free?","what's your whatsapp?"];
+$('ideas').innerHTML=IDEAS.map(t=>`<button style="text-align:left" onclick="$('demotxt').value=this.textContent;sendDemo()">${t}</button>`).join('');
+async function sendDemo(){const t=$('demotxt').value.trim()||IDEAS[0];$('demotxt').value='';await post('/api/demo',{text:t})}
+function drawChat(){
+  const lines=(S.log||[]).filter(l=>l.includes('demo-fan'));
+  const out=[];for(const l of lines){let m;
+    if(m=l.match(/\] fan demo-fan: (.*)$/))out.push(`<div class="b fan">${esc(m[1])}</div>`);
+    else if(m=l.match(/-> fan demo-fan \[[^\]]*\]: (.*)$/))m[1].split(' | ').forEach(x=>out.push(`<div class="b me">${esc(x)}</div>`));
+    else if(m=l.match(/HANDOFF fan demo-fan: (.*)$/))out.push(`<div class="b sys">handed to a human: ${esc(m[1])}</div>`);
+    else if(l.includes('demo-fan: new chat'))out.length=0;
+    else if(l.includes('wants free'))out.push(`<div class="b sys">fan muted: wants free</div>`);}
+  const c=$('chat'),atEnd=c.scrollTop+c.clientHeight>=c.scrollHeight-20;
+  c.innerHTML=out.join('')||'<div class="b sys">write something below</div>';if(atEnd)c.scrollTop=c.scrollHeight;
 }
 async function refresh(){
-  S=Object.assign(S,await get('/api/status'));
-  $('run').textContent=S.running?S.status:'stopped';$('run').className='pill '+(S.running?'on':'off');
-  $('toggle').textContent=S.running?'Stop':'Start';$('toggle').className=S.running?'stop':'pri';
-  const ago=S.claude_seen_ago_s;
-  $('claude').textContent=ago==null?'Claude: not connected':ago<300?`Claude: active ${ago}s ago`:`Claude: idle ${Math.round(ago/60)} min`;
-  $('claude').className='pill '+(ago!=null&&ago<300?'on':'off');
+  S=await get('/api/status');
+  $('run').textContent=S.running?'Bot is on':'Bot is off';$('run').className='pill '+(S.running?'on':'off');
+  $('toggle').textContent=S.running?'Turn bot off':'Turn bot on';$('toggle').className=(S.running?'stop':'pri')+' big';
+  const ago=S.claude_seen_ago_s,w=ago!=null&&ago<300;
+  $('claude').textContent=w?'Claude is working':'Claude is not working';$('claude').className='pill '+(w?'on':'off');
   const t=S.today||{};
-  $('stats').innerHTML=[['replies','Replies'],['leads','Hot leads'],['handoff','Handoffs'],['free','Wanted free']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('')+`<div><b>${S.inbox}</b><span>In inbox</span></div>`;
+  $('stats').innerHTML=[['replies','Replies'],['leads','Hot fans'],['handoff','To a human'],['free','Wanted free']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('');
   $('log').textContent=(S.log||[]).slice().reverse().join('\n');
   const inb=await get('/api/inbox?limit=20&ui=1');
-  $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> · fan ${esc(x.fan_id)} · ${esc(x.stage)} · heat ${x.heat}<br>${esc(x.incoming)}</div>`).join(''):'<div class="empty">nothing waiting</div>';
+  $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> <span class="hint">fan ${esc(x.fan_id)}</span><br>${esc(x.incoming)}</div>`).join(''):'<p class="empty">Nobody is waiting.</p>';
+  drawChat();
 }
 try{if(localStorage.dacTheme)document.documentElement.dataset.theme=localStorage.dacTheme}catch(e){}
 $('theme').onclick=()=>{const t=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=t;try{localStorage.dacTheme=t}catch(e){}};
-$('toggle').onclick=()=>post('/api/run',{on:!S.running});
-(async()=>{CFG=await get('/api/config');setInterval(async()=>{const c=await get('/api/config');if(JSON.stringify(c.profiles)!==JSON.stringify(CFG.profiles)){CFG=c;drawCfg()}},4000);S.py='~/.duck-ai-chatter-venv/bin/python';S.mcp='/Volumes/CLAUDE/2_Apps/duck-ai-chatter/mcp_server.py';drawCfg();refresh();setInterval(refresh,3000)})();
+$('toggle').onclick=async()=>{if(!S.running&&!SETUP.onlymonster){toast('Connect OnlyMonster first');tab('settings');return}await post('/api/run',{on:!S.running})};
+(async()=>{CFG=await get('/api/config');drawCfg();refresh();loadSetup();setInterval(refresh,3000);setInterval(loadSetup,30000)})();
 </script></body></html>

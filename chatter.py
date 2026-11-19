@@ -369,7 +369,8 @@ class Chatter:
 
     def tone(self, pid):
         p = self.profile(pid)
-        return {"profile": p["name"], "username": p.get("username", ""), "voice": read_tone(p.get("tone_file", "")),
+        voice = (p.get("voice") or "").strip() or read_tone(p.get("tone_file", ""))
+        return {"profile": p["name"], "username": p.get("username", ""), "voice": voice,
                 "playbook": PLAYBOOK.format(min_turns=MIN_TURNS_BEFORE_TEASE)}
 
     def send_reply(self, pid, fid, messages, stage="", heat=0, notes="", asked_to_see=False,
@@ -484,8 +485,17 @@ class Chatter:
             self.save_cfg()
         p = self.profile("demo")
         ps = self.pstate("demo")
-        fid = str(random.randint(100, 999)) if not text else "demo-fan"
+        fid = "demo-fan"
         text = text or random.choice(self.DEMO_LINES)
+        f = self.fan("demo", fid)
+        if text == "__reset__" or self.is_paused(f) or self.is_muted("demo", fid):
+            ps["fans"].pop(fid, None)
+            self.cfg["muted"] = [m for m in self.cfg["muted"] if m != "demo:demo-fan"]
+            self.state["inbox"].pop("demo:demo-fan", None)
+            self.log("[Demo model] demo-fan: new chat")
+            if text == "__reset__":
+                self.save()
+                return {"ok": True, "reset": True}
         mid = int(time.time() * 1000)
         items = [{"id": mid, "text": text, "is_sent_by_me": False, "created_at": datetime.now().isoformat()}]
         ps["seen"][fid] = mid
@@ -502,6 +512,38 @@ class Chatter:
                               "test_mode": p.get("test_mode", True), "tone_file": p.get("tone_file", "")}
                              for p in self.cfg["profiles"]],
                 "muted": self.cfg["muted"], "log": self.logs[-60:]}
+
+    def setup(self):
+        """Checklist for the Home screen."""
+        import shutil, subprocess
+        profs = [p for p in self.cfg["profiles"] if p["id"] != "demo"]
+        active = [p for p in profs if p.get("enabled")]
+        mcp_ok = False
+        claude = shutil.which("claude") or "/opt/homebrew/bin/claude"
+        try:
+            r = subprocess.run([claude, "mcp", "get", "duck-chatter"], capture_output=True, text=True, timeout=20)
+            mcp_ok = r.returncode == 0
+        except Exception:
+            pass
+        return {"onlymonster": bool(self.cfg.get("om_token")), "models": len(profs), "active": len(active),
+                "voice": all((p.get("voice") or p.get("tone_file")) for p in active) if active else False,
+                "telegram": bool(self.cfg.get("tg_token") and self.cfg.get("tg_chat")),
+                "claude_connected": mcp_ok,
+                "claude_working": bool(self.last_claude and time.time() - self.last_claude < 300),
+                "live": [p["name"] for p in active if not p.get("test_mode", True)]}
+
+    def connect_claude(self):
+        import shutil, subprocess, sys
+        claude = shutil.which("claude") or "/opt/homebrew/bin/claude"
+        py = os.path.join(os.path.expanduser("~"), ".duck-ai-chatter-venv", "bin", "python")
+        if not os.path.exists(py):
+            py = sys.executable
+        subprocess.run([claude, "mcp", "remove", "duck-chatter", "-s", "user"], capture_output=True, timeout=30)
+        r = subprocess.run([claude, "mcp", "add", "--scope", "user", "duck-chatter", "--", py,
+                            os.path.join(APP_DIR, "mcp_server.py")], capture_output=True, text=True, timeout=30)
+        ok = r.returncode == 0
+        self.log("Claude connected (MCP duck-chatter)" if ok else f"Claude connect failed: {r.stderr[:200]}")
+        return {"ok": ok, "error": "" if ok else (r.stderr or r.stdout)[:300]}
 
     def set_running(self, on):
         self.running = bool(on)
@@ -558,6 +600,8 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, C.get_inbox(int(q.get("limit", 10)), "ui" not in q))
             if u.path == "/api/tone":
                 return self.send(200, C.tone(q["profile_id"]))
+            if u.path == "/api/setup":
+                return self.send(200, C.setup())
             if u.path == "/api/accounts":
                 return self.send(200, C.om().accounts())
             if u.path == "/api/fan":
@@ -591,6 +635,8 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, C.send_reply(b["profile_id"], b["fan_id"], b.get("messages"), b.get("stage", ""),
                                                    b.get("heat", 0), b.get("notes", ""), b.get("asked_to_see", False),
                                                    b.get("buying_intent", False), b.get("wants_free", False)))
+            if u.path == "/api/connect_claude":
+                return self.send(200, C.connect_claude())
             if u.path == "/api/demo":
                 return self.send(200, C.demo_message(b.get("text", "")))
             if u.path == "/api/skip":
