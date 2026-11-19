@@ -1,0 +1,11 @@
+#!/bin/bash
+# Portable launcher: finds the repo folder next to the .app, sets up its own Python env on first run.
+APP_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+VENV="$HOME/.duck-ai-chatter-venv"
+PY="$(command -v python3 || echo /usr/bin/python3)"
+if [ ! -x "$VENV/bin/python" ] || ! "$VENV/bin/python" -c "import webview, mcp" 2>/dev/null; then
+  osascript -e 'display notification "First start: installing components (1-2 min)..." with title "DUCK AI Chatter"'
+  "$PY" -m venv "$VENV" && "$VENV/bin/pip" -q install -r "$APP_DIR/requirements.txt" || {
+    osascript -e 'display alert "DUCK AI Chatter" message "Could not install components. Install Python from python.org and try again."'; exit 1; }
+fi
+exec "$VENV/bin/python" "$APP_DIR/app.py"

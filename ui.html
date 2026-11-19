@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DUCK AI Chatter</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0b0c;--card:#141416;--line:#26262a;--tx:#ededee;--mute:#8a8a90;--acc:#0082f3;--ok:#2fbf71;--bad:#e5484d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 "Inter Tight",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}h1 span{color:var(--acc)}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);margin:0 0 12px;font-weight:600}
+main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px;max-width:1300px}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:16px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.full{grid-column:1/-1}
+button{background:#1d1d20;color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--acc)}button.pri{background:var(--acc);border-color:var(--acc);color:#fff}button.stop{background:var(--bad);border-color:var(--bad);color:#fff}
+input,select,textarea{background:#0f0f11;color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:7px 9px;font:inherit;width:100%}
+label{display:block;color:var(--mute);font-size:12px;margin:10px 0 4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.pill{padding:3px 9px;border-radius:99px;font-size:12px;border:1px solid var(--line);color:var(--mute)}
+.pill.on{color:var(--ok);border-color:var(--ok)}.pill.off{color:var(--bad);border-color:var(--bad)}
+.stats{display:flex;gap:18px}.stats b{display:block;font-size:22px}.stats span{color:var(--mute);font-size:12px}
+.log{font:12px/1.5 ui-monospace,Menlo,monospace;max-height:340px;overflow:auto;white-space:pre-wrap;color:#c9c9cc}
+.prof{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px}
+.prof .row>*{flex:initial}.grow{flex:1!important}
+code{background:#0f0f11;border:1px solid var(--line);border-radius:6px;padding:8px;display:block;white-space:pre-wrap;font-size:12px}
+.muted{color:var(--mute);font-size:12px}.sp{flex:1}
+.inb{border-bottom:1px solid var(--line);padding:8px 0}.inb:last-child{border:0}
+</style></head><body>
+<header>
+  <h1>DUCK <span>AI</span> Chatter</h1>
+  <span id="run" class="pill">stopped</span>
+  <span id="claude" class="pill">Claude: not connected</span>
+  <span class="sp"></span>
+  <button id="toggle" class="pri">Start</button>
+  <button onclick="post('/api/check_now',{})">Check now</button>
+</header>
+<main>
+  <section class="card">
+    <h2>Today</h2>
+    <div class="stats" id="stats"></div>
+    <label>Check fans every</label>
+    <select id="poll" onchange="saveCfg({poll_seconds:+this.value})">
+      <option value="30">30 seconds</option><option value="60">1 minute</option>
+      <option value="120">2 minutes</option><option value="300">5 minutes</option></select>
+    <label>Chats checked per pass</label>
+    <input id="fpc" type="number" min="5" max="100" onchange="saveCfg({fans_per_cycle:+this.value})">
+  </section>
+  <section class="card">
+    <h2>Connect to Claude</h2>
+    <div class="muted">1. Add the MCP server once (Terminal):</div>
+    <code id="addcmd"></code>
+    <div class="muted" style="margin-top:10px">2. In a Claude session, start the shift (Claude answers fans from the inbox on this rhythm):</div>
+    <code id="loopcmd"></code>
+    <div class="row" style="margin-top:8px"><button onclick="copy('addcmd')">Copy step 1</button><button onclick="copy('loopcmd')">Copy step 2</button></div>
+  </section>
+  <section class="card full">
+    <div class="row"><h2 class="grow">Models</h2><button onclick="loadAccounts()">Load accounts from OnlyMonster</button></div>
+    <div id="profiles"></div>
+  </section>
+  <section class="card">
+    <h2>Inbox (waiting for Claude)</h2><div id="inbox" class="muted">empty</div>
+    <h2 style="margin-top:16px">Test without real fans</h2>
+    <div class="muted">Creates a fake fan message for "Demo model". Always test mode - nothing goes to OnlyFans.</div>
+    <div class="row" style="margin-top:8px"><input id="demotxt" class="grow" placeholder="type what the fan says, or leave empty for a random line">
+    <button onclick="post('/api/demo',{text:$('demotxt').value});$('demotxt').value=''">Send fake fan message</button></div>
+  </section>
+  <section class="card">
+    <h2>Keys</h2>
+    <label>OnlyMonster API key</label><input id="om" type="password" placeholder="paste to change">
+    <label>Telegram bot token</label><input id="tgt" type="password" placeholder="paste to change">
+    <label>Telegram chat id</label><input id="tgc">
+    <label>Stop words (comma separated)</label><textarea id="hk" rows="2"></textarea>
+    <div class="row" style="margin-top:10px"><button class="pri" onclick="saveKeys()">Save</button></div>
+  </section>
+  <section class="card full"><h2>Log</h2><div id="log" class="log"></div></section>
+</main>
+<script>
+let S={},CFG={},ACC=[];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function get(u){const r=await fetch(u);return r.json()}
+async function post(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});const j=await r.json();refresh();return j}
+async function saveCfg(b){await post('/api/config',b);CFG=await get('/api/config')}
+function copy(id){navigator.clipboard.writeText($(id).textContent)}
+async function saveKeys(){await saveCfg({om_token:$('om').value,tg_token:$('tgt').value,tg_chat:$('tgc').value,
+  handoff_keywords:$('hk').value.split(',').map(s=>s.trim()).filter(Boolean)});$('om').value='';$('tgt').value='';drawCfg()}
+async function loadAccounts(){const a=await get('/api/accounts');if(a.error){alert(a.error);return}ACC=a;
+  const have=new Set(CFG.profiles.map(p=>String(p.id)));
+  for(const x of a){if(!have.has(String(x.id)))CFG.profiles.push({id:String(x.id),name:x.name||x.username,username:x.username||'',
+    platform_account_id:x.platform_account_id,enabled:false,test_mode:true,tone_file:''})}
+  await saveCfg({profiles:CFG.profiles});drawCfg()}
+function setP(i,k,v){CFG.profiles[i][k]=v;saveCfg({profiles:CFG.profiles}).then(drawCfg)}
+function drawCfg(){
+  $('poll').value=String(CFG.poll_seconds||60);$('fpc').value=CFG.fans_per_cycle||25;$('tgc').value=CFG.tg_chat||'';
+  $('hk').value=(CFG.handoff_keywords||[]).join(', ');
+  $('om').placeholder=CFG.om_token?'saved - paste to change':'paste key';$('tgt').placeholder=CFG.tg_token?'saved - paste to change':'paste token';
+  const p=CFG.profiles||[];
+  $('profiles').innerHTML=p.length?p.map((x,i)=>`<div class="prof"><div class="row">
+    <b class="grow">${esc(x.name)} <span class="muted">@${esc(x.username)}</span></b>
+    <label style="margin:0"><input type="checkbox" style="width:auto" ${x.enabled?'checked':''} onchange="setP(${i},'enabled',this.checked)"> Active</label>
+    <label style="margin:0"><input type="checkbox" style="width:auto" ${x.test_mode!==false?'checked':''} onchange="setP(${i},'test_mode',this.checked)"> Test mode (nothing sent)</label></div>
+    <label>Voice file (tone of voice, .txt / .md / .docx full path)</label>
+    <input value="${esc(x.tone_file)}" onchange="setP(${i},'tone_file',this.value)" placeholder="/Users/lest/U/.../tone.md"></div>`).join('')
+    :'<div class="muted">No models yet - save the OnlyMonster key, then "Load accounts".</div>';
+  const add='claude mcp add --scope user duck-chatter -- '+(S.py||'~/Apps/_venvs/duck-chatter/bin/python')+' '+(S.mcp||'~/Apps/duck-ai-chatter/mcp_server.py');
+  $('addcmd').textContent=add;
+  const sec=+(CFG.poll_seconds||60);const iv=sec<60?'1m':Math.round(sec/60)+'m';
+  $('loopcmd').textContent=`/loop ${iv} Run one DUCK AI Chatter pass with the duck-chatter tools: get_inbox; for each fan read get_voice once per profile, reply with send_reply in her voice following the playbook, or handoff/skip. If the inbox is empty, answer only "inbox empty".`;
+}
+async function refresh(){
+  S=Object.assign(S,await get('/api/status'));
+  $('run').textContent=S.running?S.status:'stopped';$('run').className='pill '+(S.running?'on':'off');
+  $('toggle').textContent=S.running?'Stop':'Start';$('toggle').className=S.running?'stop':'pri';
+  const ago=S.claude_seen_ago_s;
+  $('claude').textContent=ago==null?'Claude: not connected':ago<300?`Claude: active ${ago}s ago`:`Claude: idle ${Math.round(ago/60)} min`;
+  $('claude').className='pill '+(ago!=null&&ago<300?'on':'off');
+  const t=S.today||{};
+  $('stats').innerHTML=[['replies','Replies'],['leads','Hot leads'],['handoff','Handoffs'],['free','Wanted free']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('')+`<div><b>${S.inbox}</b><span>In inbox</span></div>`;
+  $('log').textContent=(S.log||[]).slice().reverse().join('\n');
+  const inb=await get('/api/inbox?limit=20&ui=1');
+  $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> · fan ${esc(x.fan_id)} · ${esc(x.stage)} · heat ${x.heat}<br>${esc(x.incoming)}</div>`).join(''):'empty';
+}
+$('toggle').onclick=()=>post('/api/run',{on:!S.running});
+(async()=>{CFG=await get('/api/config');setInterval(async()=>{const c=await get('/api/config');if(JSON.stringify(c.profiles)!==JSON.stringify(CFG.profiles)){CFG=c;drawCfg()}},4000);S.py='/Volumes/CLAUDE/2_Apps/_venvs/duck-chatter/bin/python';S.mcp='/Volumes/CLAUDE/2_Apps/duck-ai-chatter/mcp_server.py';drawCfg();refresh();setInterval(refresh,3000)})();
+</script></body></html>
