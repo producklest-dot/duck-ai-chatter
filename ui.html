@@ -23,7 +23,8 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--bod
 .logo img{width:40px;height:40px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--acc)}
 .logo small{display:block;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.12em}
 .sp{flex:1}
-nav{max-width:1100px;margin:12px auto 0;display:flex;gap:4px;flex-wrap:wrap}
+nav{max-width:1100px;margin:0 auto;padding-top:12px;display:flex;gap:4px;flex-wrap:wrap;background:var(--bg)}
+.top{padding-bottom:8px;background:var(--bg)}
 nav button{background:transparent;border-color:transparent;color:var(--ink-3)}
 nav button.on{background:var(--card);border-color:var(--line);color:var(--ink)}
 main{max-width:1148px;margin:0 auto;padding:16px 24px 48px}
@@ -231,6 +232,10 @@ async function loadAccounts(){const a=await get('/api/accounts');if(a.error){toa
   for(const x of a){if(!have.has(String(x.id))){n++;CFG.profiles.push({id:String(x.id),name:x.name||x.username,username:x.username||'',platform_account_id:x.platform_account_id,enabled:false,test_mode:true,voice:''})}}
   await saveCfg({profiles:CFG.profiles});toast(n?`Додано моделей: ${n}`:'Нових моделей немає');drawCfg();loadSetup()}
 function setP(i,k,v){CFG.profiles[i][k]=v;saveCfg({profiles:CFG.profiles}).then(()=>{drawCfg();loadSetup();toast('Збережено')})}
+function voiceFile(i,f){if(!f)return;
+  if(/\.docx$/i.test(f.name)){const r=new FileReader();r.onload=async()=>{const j=await post('/api/voice_docx',{data:String(r.result).split(',')[1]});if(j.text){setP(i,'voice',j.text);toast('Голос завантажено з '+f.name)}else toast('Не вдалося прочитати .docx')};r.readAsDataURL(f);return}
+  if(!/\.(md|txt|markdown)$/i.test(f.name)&&!(f.type||'').startsWith('text')){toast('Потрібен файл .md, .txt або .docx');return}
+  const r=new FileReader();r.onload=()=>{setP(i,'voice',String(r.result));toast('Голос завантажено з '+f.name)};r.readAsText(f)}
 function liveSwitch(i,el){const x=CFG.profiles[i];if(el.checked&&!confirm('Справжні повідомлення підуть фанам '+x.name+'. Продовжити?')){el.checked=false;return}setP(i,'test_mode',!el.checked)}
 function drawCfg(){
   $('poll').value=String(CFG.poll_seconds||60);$('fpc').value=CFG.fans_per_cycle||25;$('tgc').value=CFG.tg_chat||'';
@@ -244,8 +249,10 @@ function drawCfg(){
     <label class="switch danger"><input type="checkbox" ${x.test_mode===false?'checked':''} onchange="liveSwitch(${i},this)"><i></i>Писати справжнім фанам (вимкнено = тренування, відповіді лише в журналі)</label>
     <label class="f">Нагадати фану, якщо він замовк</label>
     <select onchange="setP(${i},'followup_hours',+this.value)" style="max-width:260px">${[[0,'не нагадувати'],[3,'через 3 год'],[6,'через 6 год'],[12,'через 12 год'],[24,'через добу'],[48,'через 2 доби']].map(([v,l])=>`<option value="${v}" ${+(x.followup_hours||0)===v?'selected':''}>${l}</option>`).join('')}</select>
-    <label class="f">Її голос</label><p class="hint">Як вона пише: характер, слова, емодзі, чого ніколи не каже. Встав сюди (можна українською).</p>
-    <textarea rows="5" onchange="setP(${i},'voice',this.value)" placeholder="Я Мія, 24, грайлива і трохи сором'язлива…">${esc(x.voice||'')}</textarea></div>`).join('')
+    <div class="row" style="margin-top:16px"><label class="f" style="margin:0;flex:1">Її голос ${(x.voice||'').trim().length<80?'<span class="tagline live">не заповнено</span>':`<span class="tagline">${(x.voice||'').length} символів</span>`}</label>
+      <button onclick="this.nextElementSibling.click()">Вибрати файл (.md, .txt, .docx)</button><input type="file" accept=".md,.txt,.markdown,.docx,text/*" style="display:none" onchange="voiceFile(${i},this.files[0])"></div>
+    <p class="hint">Як вона пише: характер, слова, емодзі, чого ніколи не каже. Встав текст або перетягни файл сюди.</p>
+    <textarea rows="5" ondragover="event.preventDefault()" ondrop="event.preventDefault();voiceFile(${i},event.dataTransfer.files[0])" onchange="setP(${i},'voice',this.value)" placeholder="Я Мія, 24, грайлива і трохи сором'язлива…">${esc(x.voice||'')}</textarea></div>`).join('')
     :'<p class="empty">Моделей ще немає. Додай ключ OnlyMonster у Налаштуваннях, потім натисни «Завантажити моделі».</p>';
 }
 function drawSetup(){

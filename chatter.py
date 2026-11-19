@@ -486,6 +486,9 @@ class Chatter:
         except (TypeError, ValueError):
             pass
         test = bool(p.get("test_mode", True))
+        voice = (p.get("voice") or "").strip() or read_tone(p.get("tone_file", ""))
+        if not test and len(voice) < 80:
+            return {"rejected": True, "reason": "this model has no voice text yet - do not reply; tell the user to add her voice in the Models tab"}
         if test:
             f.setdefault("chat", []).extend({"from": "creator", "text": m, "at": datetime.now().isoformat()} for m in msgs)
             f["chat"] = f["chat"][-HISTORY:]
@@ -817,7 +820,7 @@ class Chatter:
         except Exception:
             pass
         return {"onlymonster": bool(self.cfg.get("om_token")), "models": len(profs), "active": len(active),
-                "voice": all((p.get("voice") or p.get("tone_file")) for p in active) if active else False,
+                "voice": all(len((p.get("voice") or "").strip()) >= 80 or p.get("tone_file") for p in active) if active else False,
                 "telegram": bool(self.cfg.get("tg_token") and self.cfg.get("tg_chat")),
                 "claude_connected": mcp_ok,
                 "claude_working": bool(self.last_claude and time.time() - self.last_claude < 300),
@@ -953,6 +956,13 @@ class H(BaseHTTPRequestHandler):
             if u.path == "/api/report_now":
                 C.tg(C.report_text())
                 return self.send(200, {"ok": True})
+            if u.path == "/api/voice_docx":
+                import base64, io
+                raw = base64.b64decode(b["data"])
+                with zipfile.ZipFile(io.BytesIO(raw)) as z:
+                    xml = z.read("word/document.xml").decode("utf-8", "replace")
+                text = re.sub(r"<[^>]+>", "", re.sub(r"</w:p>", "\n", xml)).strip()
+                return self.send(200, {"text": text})
             if u.path == "/api/connect_claude":
                 return self.send(200, C.connect_claude())
             if u.path == "/api/demo":
