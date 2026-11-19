@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DUCK AI Chatter</title>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fira+Code:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* Ogonek notebook structure x DUCK TRAFF: monochrome ink, one accent (DUCK blue), red margin = Ogonek signature */
 :root{
@@ -10,7 +10,7 @@
   --acc:#0082F3;--acc-soft:rgba(0,130,243,.14);--on-acc:#fff;
   --red:#CF1717;--red-soft:rgba(207,23,23,.14);--ok:#7FB8EF;
   --grid-line:rgba(193,197,201,.06);--grid-margin:rgba(240,106,106,.30);--grid:24px;
-  --script:"Caveat","Bradley Hand",cursive;--mono:"Fira Code",ui-monospace,monospace;--body:"Inter Tight",system-ui,sans-serif;
+  --script:"Inter Tight",system-ui,sans-serif;--mono:"Fira Code",ui-monospace,monospace;--body:"Inter Tight",system-ui,sans-serif;
   --ease:cubic-bezier(.22,1,.36,1);color-scheme:dark}
 :root[data-theme="light"]{
   --bg:#DADBDD;--card:#F4F5F6;--field:#E7E8EA;--side:#EEEFF0;
@@ -25,13 +25,13 @@ body{min-height:100vh}
 .top{position:sticky;top:0;z-index:5;padding:12px 24px 0;background:linear-gradient(var(--bg) 70%,transparent)}
 .bar{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px 10px 16px}
 .logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;letter-spacing:-.01em}
-.logo i{width:30px;height:30px;border-radius:9px;background:var(--acc);display:grid;place-items:center;font:500 12px var(--mono);color:#fff;font-style:normal;position:relative}
+.logo i{width:32px;height:32px;border-radius:9px;background:var(--acc);display:grid;place-items:center;font-style:normal;position:relative}.logo small{display:block;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase}.logo span{line-height:1.1}
 .logo i::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
 .sp{flex:1}
 /* hero */
 .hero{max-width:1240px;margin:22px auto 4px;padding:0 24px}
-.hero h1{font:600 clamp(40px,5vw,58px)/1 var(--script);margin:0;display:inline-block;position:relative}
-.hero h1::after{content:"";position:absolute;left:4px;right:30%;bottom:-6px;height:3px;border-radius:3px;background:var(--red);transform:rotate(-1.2deg)}
+.hero h1{font:600 clamp(32px,4vw,46px)/1.05 var(--body);letter-spacing:-.03em;margin:6px 0 0}
+.hero h1 em{font-style:normal;color:var(--acc)}.kicker{display:inline-flex;align-items:center;gap:8px;font:500 12px var(--mono);color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase}.kicker::before{content:"";width:18px;height:2px;background:var(--acc)}
 .hero p{color:var(--ink-3);margin:14px 0 0;max-width:640px}
 /* layout */
 main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 48px;max-width:1288px;margin:0 auto}
@@ -44,7 +44,7 @@ main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 48px;
   background-size:100% 100%,var(--grid) var(--grid),var(--grid) var(--grid);padding-right:56px}
 @media(max-width:600px){.card.paper{background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:var(--grid) var(--grid);padding-right:24px}}
 .full{grid-column:1/-1}
-h2{font:600 28px/1.1 var(--script);margin:0 0 14px;letter-spacing:0}
+h2{font:600 17px/1.2 var(--body);letter-spacing:-.01em;margin:0 0 14px;display:flex;align-items:center;gap:8px}h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--acc)}
 .label{font:500 11px var(--mono);color:var(--ink-3);text-transform:none}
 /* controls */
 button{font:500 14px var(--body);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:11px;padding:9px 14px;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
@@ -80,12 +80,12 @@ code{font:12px/1.55 var(--mono);background:var(--field);border:1px solid var(--l
 .muted{color:var(--ink-3);font-size:13px}
 .inb{border-bottom:1px dashed var(--line);padding:10px 0}.inb:last-child{border:0}
 .inb b{font-weight:600}
-.empty{font:600 22px var(--script);color:var(--ink-3);padding:10px 0}
+.empty{font:500 14px var(--body);color:var(--ink-3);padding:10px 0}
 input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px;vertical-align:-3px;margin-right:6px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <div class="top"><div class="bar">
-  <div class="logo"><i>AI</i>DUCK AI Chatter</div>
+  <div class="logo"><i><svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true"><path fill="#fff" d="M19.5 6.5a6 6 0 0 0-6 6c0 1.3.4 2.4 1 3.4C10 16 6 18.4 6 22.5 6 26 9.5 27.5 15 27.5c6.3 0 10.5-2.6 10.5-7 0-2.4-1.3-4-3.1-5 .7-.9 1.1-2 1.1-3.1v-.3l3.6-1.3-3.9-1.4A6 6 0 0 0 19.5 6.5z"/><circle cx="20.4" cy="11.3" r="1.3" fill="#0082F3"/></svg></i><span><small>DUCK TRAFF</small>AI Chatter</span></div>
   <span id="run" class="pill">stopped</span>
   <span id="claude" class="pill">Claude: not connected</span>
   <span class="sp"></span>
@@ -93,7 +93,7 @@ input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px;vertical-ali
   <button onclick="post('/api/check_now',{})">Check now</button>
   <button id="toggle" class="pri">Start</button>
 </div></div>
-<div class="hero"><h1>Chatter workspace</h1><p>The app checks fans, Claude writes the replies, hot leads go to you in Telegram.</p></div>
+<div class="hero"><div class="kicker">DUCK TRAFF · agency tools</div><h1>DUCK <em>AI</em> Chatter</h1><p>The app checks fans, Claude writes the replies, hot leads go to you in Telegram.</p></div>
 <main>
   <section class="card paper">
     <h2>Today</h2>
