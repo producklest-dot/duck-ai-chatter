@@ -80,6 +80,17 @@ label.f{display:block;font-weight:500;margin:16px 0 4px}
 .inb{border-bottom:1px dashed var(--line);padding:10px 0}.inb:last-child{border:0}
 .empty{color:var(--ink-3);padding:6px 0}
 .note{background:var(--acc-soft);border-radius:12px;padding:12px 14px;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font:500 12px var(--mono);color:var(--ink-3);padding:8px;border-bottom:1px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px dashed var(--line);vertical-align:top}
+tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
+.tg{display:inline-block;font:500 11px var(--mono);padding:2px 8px;border-radius:99px;background:var(--acc-soft);color:var(--acc);margin:0 4px 4px 0}
+.tg.red{background:var(--red-soft);color:var(--red)}
+.vrow{display:grid;grid-template-columns:2fr 90px 1.2fr auto;gap:8px;margin-top:8px}
+.side{position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--card);border-left:1px solid var(--line);z-index:20;padding:20px;overflow:auto;transform:translateX(100%);transition:transform .25s var(--ease)}
+.side.on{transform:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.on{opacity:1}
 </style></head><body>
@@ -93,7 +104,7 @@ label.f{display:block;font-weight:500;margin:16px 0 4px}
 </div>
 <nav id="nav">
   <button data-t="home" class="on">Головна</button><button data-t="models">Моделі</button>
-  <button data-t="try">Спробувати</button><button data-t="settings">Налаштування</button><button data-t="log">Журнал</button>
+  <button data-t="fans">Фани</button><button data-t="content">Контент</button><button data-t="mail">Розсилки</button><button data-t="try">Спробувати</button><button data-t="settings">Налаштування</button><button data-t="log">Журнал</button>
 </nav></div>
 <main>
 <section class="tab on" id="t-home">
@@ -113,6 +124,49 @@ label.f{display:block;font-weight:500;margin:16px 0 4px}
     <div class="row"><div style="flex:1"><h2>Моделі</h2><p class="sub" style="margin:0">Акаунти OnlyFans з OnlyMonster. Для кожної моделі вмикай бота окремо і дай йому її голос.</p></div>
     <button class="pri" onclick="loadAccounts()">Завантажити моделі</button></div>
     <div id="profiles"></div>
+  </div>
+</section>
+<section class="tab" id="t-fans">
+  <div class="card full">
+    <div class="row"><div style="flex:1"><h2>Фани</h2><p class="sub" style="margin:0">Усі, з ким бот спілкувався. Натисни на фана, щоб побачити переписку, нотатки і покупки.</p></div>
+      <select id="fanModel" style="width:auto" onchange="loadFans()"></select></div>
+    <div class="row" style="margin:14px 0 4px"><input id="fanSearch" placeholder="Пошук: id, нотатки, мітка" oninput="drawFans()" style="flex:1">
+      <div class="chips" id="fanFilter"></div></div>
+    <div id="fansTable"></div>
+  </div>
+</section>
+<section class="tab" id="t-content">
+  <div class="card full">
+    <div class="row"><div style="flex:1"><h2>Платний контент (PPV)</h2><p class="sub" style="margin:0">Що Claude може запропонувати гарячим фанам. Ціна в доларах; media ID беруться з Vault в OnlyMonster (через кому).</p></div>
+      <select id="vaultModel" style="width:auto" onchange="drawVault()"></select></div>
+    <label class="switch" style="margin-top:12px"><input type="checkbox" id="ppvOn" onchange="setVaultFlag(this.checked)"><i></i>Claude пропонує платний контент гарячим фанам (вимкнено = гарячий фан іде людині)</label>
+    <div id="vault"></div>
+    <div class="row" style="margin-top:12px"><button onclick="addVault()">+ Додати контент</button></div>
+  </div>
+</section>
+<section class="tab" id="t-mail">
+  <div class="card">
+    <h2>Розсилка</h2><p class="sub">Повідомлення групі фанів однієї моделі. Заглушені, передані людині і «хочуть безкоштовно» не отримують.</p>
+    <label class="f">Модель</label><select id="mailModel" onchange="countSeg()"></select>
+    <label class="f">Кому</label>
+    <div class="row"><select id="segStage" onchange="countSeg()" style="flex:1"><option value="">усі стадії</option><option value="greeting">привітання</option><option value="rapport">знайомство</option><option value="flirt">флірт</option><option value="tease">тизер</option></select>
+      <input id="segTag" placeholder="мітка (кит, vip…)" onchange="countSeg()" style="flex:1"></div>
+    <div class="row" style="margin-top:8px"><input id="segSilent" type="number" min="0" placeholder="мовчить днів, від" onchange="countSeg()" style="flex:1">
+      <input id="segSpent" type="number" min="0" placeholder="витратив $, від" onchange="countSeg()" style="flex:1"></div>
+    <p class="hint" id="segCount" style="margin-top:8px">—</p>
+    <label class="f">Як писати</label>
+    <label class="switch"><input type="checkbox" id="mailAI" checked onchange="$('mailPPV').disabled=this.checked"><i></i>Claude пише кожному особисто (вимкнено = всім однаковий текст)</label>
+    <label class="f" id="mailTextLabel">Завдання для Claude / текст</label>
+    <textarea id="mailText" rows="3" placeholder="Напр.: напиши, що в неї сьогодні вихідний і вона нудьгує, запитай як у нього справи"></textarea>
+    <label class="f">PPV до тексту (тільки однаковий текст)</label><select id="mailPPV" disabled><option value="">без PPV</option></select>
+    <div class="row" style="margin-top:16px"><button class="pri" onclick="sendMail()">Надіслати розсилку</button></div>
+  </div>
+  <div class="card paper">
+    <h2>Звіти</h2><p class="sub">Щовечора в Telegram: відповіді, гарячі фани, PPV, покупки, дохід по кожній моделі.</p>
+    <label class="f">Надсилати звіт о</label>
+    <select id="repHour" onchange="saveCfg({report_hour:this.value===''?'':+this.value}).then(()=>toast('Збережено'))"><option value="">не надсилати</option></select>
+    <div class="row" style="margin-top:14px"><button onclick="post('/api/report_now',{}).then(()=>toast('Звіт надіслано в Telegram'))">Надіслати зараз</button></div>
+    <pre id="repPreview" class="log" style="margin-top:14px"></pre>
   </div>
 </section>
 <section class="tab" id="t-try">
@@ -154,6 +208,7 @@ label.f{display:block;font-weight:500;margin:16px 0 4px}
 </section>
 <section class="tab" id="t-log"><div class="card full"><h2>Журнал</h2><p class="sub">Усе, що робив бот, нові зверху.</p><div id="log" class="log"></div></div></section>
 </main>
+<div class="side" id="side"></div>
 <div class="toast" id="toast"></div>
 <script>
 let S={},CFG={},SETUP={};
@@ -161,11 +216,11 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function get(u){return (await fetch(u)).json()}
 async function post(u,b){const j=await (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();refresh();return j}
-async function saveCfg(b){await post('/api/config',b);CFG=await get('/api/config')}
+async function saveCfg(b){await post('/api/config',b);CFG=await get('/api/config');if(typeof fillSelects==='function'&&!b.report_hour)fillSelects()}
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
-function tab(t){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t))}
+function tab(t){$('side').classList.remove('on');document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id==='t-'+t))}
 $('nav').onclick=e=>{if(e.target.dataset.t)tab(e.target.dataset.t)};
-const SHIFT=()=>`/loop ${+(CFG.poll_seconds||60)<60?'1m':Math.round((CFG.poll_seconds||60)/60)+'m'} Do a DUCK AI Chatter pass with the duck-chatter tools: get_inbox; for each fan read get_voice once per profile, reply with send_reply in her voice following the playbook, or handoff/skip. If the inbox is empty, answer only "inbox empty".`;
+const SHIFT=()=>`/loop ${+(CFG.poll_seconds||60)<60?'1m':Math.round((CFG.poll_seconds||60)/60)+'m'} Do a DUCK AI Chatter pass with the duck-chatter tools: get_inbox; for each fan read get_voice once per profile, reply with send_reply (or send_ppv for hot fans when ppv_on) in her voice following the playbook, or handoff/skip. If the inbox is empty, answer only "inbox empty".`;
 async function copyShift(){await navigator.clipboard.writeText(SHIFT());toast('Скопійовано. Встав у Claude і натисни Enter')}
 async function connectClaude(){toast('Підключаю…');const r=await post('/api/connect_claude',{});toast(r.ok?'Claude підключено. Перезапусти Claude один раз':'Не вийшло: '+r.error);loadSetup()}
 async function saveKeys(){await saveCfg({om_token:$('om').value,tg_token:$('tgt').value,tg_chat:$('tgc').value});$('om').value='';$('tgt').value='';toast('Збережено');drawCfg();loadSetup()}
@@ -185,6 +240,8 @@ function drawCfg(){
       <span class="tagline ${x.enabled&&x.test_mode===false?'live':''}">${!x.enabled?'вимкнено':x.test_mode===false?'наживо: пише фанам':'тренування'}</span></div>
     <label class="switch"><input type="checkbox" ${x.enabled?'checked':''} onchange="setP(${i},'enabled',this.checked)"><i></i>Бот працює для цієї моделі</label>
     <label class="switch danger"><input type="checkbox" ${x.test_mode===false?'checked':''} onchange="liveSwitch(${i},this)"><i></i>Писати справжнім фанам (вимкнено = тренування, відповіді лише в журналі)</label>
+    <label class="f">Нагадати фану, якщо він замовк</label>
+    <select onchange="setP(${i},'followup_hours',+this.value)" style="max-width:260px">${[[0,'не нагадувати'],[3,'через 3 год'],[6,'через 6 год'],[12,'через 12 год'],[24,'через добу'],[48,'через 2 доби']].map(([v,l])=>`<option value="${v}" ${+(x.followup_hours||0)===v?'selected':''}>${l}</option>`).join('')}</select>
     <label class="f">Її голос</label><p class="hint">Як вона пише: характер, слова, емодзі, чого ніколи не каже. Встав сюди (можна українською).</p>
     <textarea rows="5" onchange="setP(${i},'voice',this.value)" placeholder="Я Мія, 24, грайлива і трохи сором'язлива…">${esc(x.voice||'')}</textarea></div>`).join('')
     :'<p class="empty">Моделей ще немає. Додай ключ OnlyMonster у Налаштуваннях, потім натисни «Завантажити моделі».</p>';
@@ -221,14 +278,70 @@ async function refresh(){
   const ago=S.claude_seen_ago_s,w=ago!=null&&ago<300;
   $('claude').textContent=w?'Claude працює':'Claude не працює';$('claude').className='pill '+(w?'on':'off');
   const t=S.today||{};
-  $('stats').innerHTML=[['replies','Відповідей'],['leads','Гарячих фанів'],['handoff','Передано людині'],['free','Хотіли безкоштовно']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('');
+  $('stats').innerHTML=[['replies','Відповідей'],['leads','Гарячих фанів'],['ppv_offers','PPV запропоновано'],['revenue','Дохід, $'],['handoff','Передано людині'],['free','Хотіли безкоштовно'],['purchases','Покупок'],['broadcast','Розсилка']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('');
   $('log').textContent=(S.log||[]).slice().reverse().join('\n');
   const inb=await get('/api/inbox?limit=20&ui=1');
   $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> <span class="hint">фан ${esc(x.fan_id)}</span><br>${esc(x.incoming)}</div>`).join(''):'<p class="empty">Ніхто не чекає.</p>';
   drawChat();
 }
+const STG={greeting:'привітання',rapport:'знайомство',flirt:'флірт',tease:'тизер'};
+const realP=()=>(CFG.profiles||[]).filter(x=>x.id!=='demo'||true);
+function modelOptions(sel){const v=$(sel).value;$(sel).innerHTML=(CFG.profiles||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');if(v)$(sel).value=v}
+let FANS=[],FF='all';
+const FILTERS=[['all','усі'],['hot','гарячі'],['buyers','покупці'],['waiting','чекають мене'],['human','у людини'],['muted','заглушені']];
+async function loadFans(){const pid=$('fanModel').value;if(!pid){$('fansTable').innerHTML='<p class="empty">Немає моделей.</p>';return}FANS=await get('/api/fans?profile_id='+encodeURIComponent(pid));drawFans()}
+function ago(t){if(!t)return'—';const m=(Date.now()/1000-t)/60;return m<60?Math.round(m)+' хв':m<1440?Math.round(m/60)+' год':Math.round(m/1440)+' дн'}
+function drawFans(){
+  $('fanFilter').innerHTML=FILTERS.map(([k,l])=>`<button class="${FF===k?'on':''}" onclick="FF='${k}';drawFans()">${l}</button>`).join('');
+  const q=$('fanSearch').value.toLowerCase();
+  const list=FANS.filter(f=>(FF==='all'||(FF==='hot'&&f.heat>=7)||(FF==='buyers'&&f.spent>0)||(FF==='waiting'&&!f.last_from_me)||(FF==='human'&&f.paused)||(FF==='muted'&&f.muted))
+    &&(!q||(f.fan_id+' '+f.notes+' '+f.tags.join(' ')).toLowerCase().includes(q)));
+  $('fansTable').innerHTML=list.length?`<table><tr><th>Фан</th><th>Стадія</th><th>Жар</th><th>Витратив</th><th>Останнє</th><th>Коли</th></tr>${list.map(f=>`<tr class="fr" onclick="openFan('${esc(f.fan_id)}')">
+    <td><b>${esc(f.fan_id)}</b><br>${f.tags.map(t=>`<span class="tg">${esc(t)}</span>`).join('')}${f.paused?'<span class="tg red">у людини</span>':''}${f.muted?'<span class="tg red">заглушено</span>':''}</td>
+    <td>${STG[f.stage]||esc(f.stage)}</td><td>${f.heat||'—'}</td><td>$${f.spent||0}</td>
+    <td class="hint">${f.last_from_me?'ми: ':'він: '}${esc((f.last_text||'').slice(0,60))}</td><td class="hint">${ago(f.last_at)}</td></tr>`).join('')}</table>`:'<p class="empty">Нікого не знайдено.</p>';
+}
+function openFan(fid){const f=FANS.find(x=>x.fan_id===fid);const pid=$('fanModel').value;if(!f)return;
+  $('side').innerHTML=`<div class="row"><h2 style="flex:1">Фан ${esc(fid)}</h2><button onclick="$('side').classList.remove('on')">Закрити</button></div>
+  <p class="hint">${STG[f.stage]||f.stage} · жар ${f.heat||0}/10 · витратив $${f.spent||0} · відповідей бота ${f.turns}</p>
+  <a href="https://onlyfans.com/my/chats/chat/${esc(fid)}" target="_blank" style="color:var(--acc)">Відкрити чат в OnlyFans</a>
+  <div class="chat" style="height:300px;margin-top:12px">${(f.chat||[]).map(m=>`<div class="b ${m.from==='fan'?'fan':'me'}">${esc(m.text)}${m.price?` <b>$${m.price}</b>`:''}</div>`).join('')||'<div class="b sys">переписки ще немає</div>'}</div>
+  <label class="f">Мітки (через кому)</label><input id="sTags" value="${esc(f.tags.join(', '))}">
+  <label class="f">Нотатки</label><textarea id="sNotes" rows="4">${esc(f.notes)}</textarea>
+  <div class="row" style="margin-top:10px"><button class="pri" onclick="saveFan('${esc(fid)}')">Зберегти</button>
+    ${f.paused?`<button onclick="fanAct('${esc(fid)}',{unpause:true})">Повернути боту</button>`:''}
+    <button onclick="fanAct('${esc(fid)}',{mute:${!f.muted}})">${f.muted?'Розглушити':'Заглушити'}</button></div>
+  <h3 style="margin:20px 0 6px">PPV-пропозиції</h3>${(f.offers||[]).length?f.offers.map((o,i)=>`<div class="row inb"><span style="flex:1">${esc(o.title)} · $${o.price} · ${ago(o.at)} тому</span>${o.bought?'<span class="tg">куплено</span>':`<button onclick="fanAct('${esc(fid)}',{bought:${i}})">Позначити купленим</button>`}</div>`).join(''):'<p class="empty">Ще не було.</p>'}
+  <div class="row" style="margin-top:10px"><input id="sSpent" type="number" placeholder="Додати витрату, $ (чайові тощо)" style="flex:1"><button onclick="fanAct('${esc(fid)}',{spent_add:+$('sSpent').value})">Додати</button></div>`;
+  $('side').classList.add('on')}
+async function fanAct(fid,b){await post('/api/fan_update',Object.assign({profile_id:$('fanModel').value,fan_id:fid},b));await loadFans();openFan(fid);toast('Збережено')}
+function saveFan(fid){fanAct(fid,{notes:$('sNotes').value,tags:$('sTags').value.split(',').map(s=>s.trim()).filter(Boolean)})}
+function vp(){return (CFG.profiles||[]).find(x=>String(x.id)===$('vaultModel').value)}
+function drawVault(){const p=vp();if(!p){$('vault').innerHTML='<p class="empty">Немає моделей.</p>';return}
+  $('ppvOn').checked=!!p.ppv_on;const v=p.vault||[];
+  $('vault').innerHTML=v.length?`<div class="vrow hint" style="margin-top:14px"><span>Що це (Claude бачить цю назву)</span><span>Ціна $</span><span>Media ID з Vault</span><span></span></div>`+v.map((x,k)=>`<div class="vrow">
+    <input value="${esc(x.title)}" onchange="editVault(${k},'title',this.value)"><input type="number" min="3" value="${x.price}" onchange="editVault(${k},'price',+this.value)">
+    <input value="${esc(x.media||'')}" placeholder="123,456" onchange="editVault(${k},'media',this.value)"><button onclick="delVault(${k})">✕</button></div>`).join(''):'<p class="empty" style="margin-top:12px">Контенту ще немає.</p>'}
+async function saveVault(){await saveCfg({profiles:CFG.profiles});drawVault();toast('Збережено')}
+function setVaultFlag(on){vp().ppv_on=on;saveVault()}
+function editVault(k,f,v){vp().vault[k][f]=v;saveVault()}
+function delVault(k){vp().vault.splice(k,1);saveVault()}
+function addVault(){const p=vp();if(!p)return;(p.vault=p.vault||[]).push({id:'v'+Date.now().toString(36),title:'Нове фото / відео',price:10,media:''});saveVault()}
+async function countSeg(){const pid=$('mailModel').value;if(!pid)return;
+  const q=new URLSearchParams({profile_id:pid,stage:$('segStage').value,tag:$('segTag').value.trim(),silent_days:$('segSilent').value,min_spent:$('segSpent').value});
+  const r=await get('/api/segment?'+q);$('segCount').textContent=`Отримають: ${r.count} фанів`;
+  const p=(CFG.profiles||[]).find(x=>String(x.id)===pid);$('mailPPV').innerHTML='<option value="">без PPV</option>'+((p&&p.vault)||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.title)} · $${x.price}</option>`).join('')}
+async function sendMail(){const pid=$('mailModel').value,t=$('mailText').value.trim();if(!t){toast('Напиши текст або завдання');return}
+  const p=(CFG.profiles||[]).find(x=>String(x.id)===pid);
+  if(!confirm(`Розсилка для ${p.name}. ${p.test_mode===false?'Піде СПРАВЖНІМ фанам.':'Тренування: лише в журнал.'} Надіслати?`))return;
+  const r=await post('/api/broadcast',{profile_id:pid,segment:{stage:$('segStage').value,tag:$('segTag').value.trim(),silent_days:$('segSilent').value,min_spent:$('segSpent').value},text:t,personalize:$('mailAI').checked,item_id:$('mailPPV').value});
+  toast(r.ok?(r.mode==='claude'?`${r.count} фанів у черзі для Claude`:`Розсилка пішла: ${r.count} фанів`):(r.error||'Не вийшло'))}
+function fillSelects(){['fanModel','vaultModel','mailModel'].forEach(modelOptions);
+  $('repHour').innerHTML='<option value="">не надсилати</option>'+Array.from({length:24},(_,h)=>`<option value="${h}">${String(h).padStart(2,'0')}:00</option>`).join('');
+  $('repHour').value=CFG.report_hour===undefined||CFG.report_hour===''?'':String(CFG.report_hour)}
+document.addEventListener('click',e=>{const t=e.target.dataset&&e.target.dataset.t;if(t==='fans')loadFans();if(t==='content')drawVault();if(t==='mail'){countSeg();get('/api/report').then(r=>$('repPreview').textContent=r.text)}});
 try{if(localStorage.dacTheme)document.documentElement.dataset.theme=localStorage.dacTheme}catch(e){}
 $('theme').onclick=()=>{const t=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=t;try{localStorage.dacTheme=t}catch(e){}};
 $('toggle').onclick=async()=>{if(!S.running&&!SETUP.onlymonster){toast('Спершу підключи OnlyMonster');tab('settings');return}await post('/api/run',{on:!S.running})};
-(async()=>{CFG=await get('/api/config');drawCfg();refresh();loadSetup();setInterval(refresh,3000);setInterval(loadSetup,30000)})();
+(async()=>{CFG=await get('/api/config');drawCfg();fillSelects();refresh();loadSetup();setInterval(refresh,3000);setInterval(loadSetup,30000)})();
 </script></body></html>

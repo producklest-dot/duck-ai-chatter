@@ -8,4 +8,4 @@ if [ ! -x "$VENV/bin/python" ] || ! "$VENV/bin/python" -c "import webview, mcp" 
   "$PY" -m venv "$VENV" && "$VENV/bin/pip" -q install -r "$APP_DIR/requirements.txt" || {
     osascript -e 'display alert "DUCK AI Chatter" message "Could not install components. Install Python from python.org and try again."'; exit 1; }
 fi
-exec "$VENV/bin/python" "$APP_DIR/app.py"
+exec "$VENV/bin/python" "$APP_DIR/app.py" >> "$HOME/Library/Logs/duck-ai-chatter.log" 2>&1

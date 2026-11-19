@@ -56,6 +56,17 @@ to a bot / AI / a real person, do NOT answer it yourself - call handoff(reason="
 
 Send with send_reply(profile_id, fan_id, messages, stage, heat, notes, asked_to_see, buying_intent, wants_free).
 If send_reply returns rejected=true, read "reason", rewrite and call it again once.
+
+Inbox item "kind":
+- reply: the fan wrote, answer him.
+- followup: he went quiet after your last message. Send ONE short light nudge to restart the chat, no tease.
+- broadcast: the agency asked to write to this fan first. Follow "task", keep it short and personal.
+
+Paid content (only if the item has ppv_on=true): when the fan is hot (asked to see you, asks for content or
+the price, heat >= 7) offer ONE item from get_vault with send_ppv(profile_id, fan_id, item_id, message).
+Pick the item that fits what he asked for; message = 1 short teasing line, no price in the text.
+Never offer to a fan who wanted free stuff, never two offers in a row without his reply.
+If ppv_on=false, never offer - ask THE QUESTION and the chat goes to a human.
 """
 
 
@@ -165,8 +176,8 @@ class OnlyMonster:
     def messages(self, aid, chat_id, limit):
         return self._get(f"/api/v0/accounts/{aid}/chats/{chat_id}/messages?limit={limit}&order=desc", aid).get("items", [])
 
-    def send(self, aid, chat_id, text):
-        body = {"text": text, "price": None, "locked_text": False, "media": []}
+    def send(self, aid, chat_id, text, price=None, media=None):
+        body = {"text": text, "price": price, "locked_text": False, "media": media or []}
         return self._call("POST", f"/api/v0/accounts/{aid}/chats/{chat_id}/messages", body=body, aid=aid)
 
 
@@ -206,9 +217,13 @@ class Chatter:
         except OSError:
             pass
 
-    def stat(self, k, n=1):
-        d = self.state["stats"].setdefault(datetime.now().strftime("%Y-%m-%d"), {})
+    def stat(self, k, n=1, pid=None):
+        day = datetime.now().strftime("%Y-%m-%d")
+        d = self.state["stats"].setdefault(day, {})
         d[k] = round(d.get(k, 0) + n, 2)
+        if pid:
+            dp = self.state.setdefault("stats_p", {}).setdefault(day, {}).setdefault(str(pid), {})
+            dp[k] = round(dp.get(k, 0) + n, 2)
 
     def om(self):
         return OnlyMonster(self.cfg.get("om_token", ""))
@@ -255,9 +270,17 @@ class Chatter:
                     self.poll_all()
                 except Exception as e:
                     self.log(f"Poll error: {e}")
+                try:
+                    self.check_followups()
+                except Exception as e:
+                    self.log(f"Follow-up error: {e}")
                 self.last_poll = time.time()
                 self.next_poll = time.time() + max(15, int(self.cfg.get("poll_seconds", 60)))
                 self.save()
+            try:
+                self.maybe_report()
+            except Exception as e:
+                self.log(f"Report error: {e}")
             if self.running:
                 self.status = f"running - next check in {max(0, int(self.next_poll - time.time()))}s"
             self.wake.wait(1)
@@ -296,6 +319,7 @@ class Chatter:
             if not items:
                 continue
             last = items[0]
+            self.touch(pid, fid, items)
             if first:
                 ps["seen"][fid] = last["id"]
                 continue
@@ -309,6 +333,43 @@ class Chatter:
                 self.on_new(p, fid, items, new)
         if first:
             ps["initialized"] = True
+
+    def touch(self, pid, fid, items):
+        """Remember the latest chat state for the fan card and follow-ups."""
+        f = self.fan(pid, fid)
+        last = items[0]
+        f["last_id"] = last["id"]
+        f["last_from_me"] = bool(last.get("is_sent_by_me"))
+        f["last_text"] = (clean(last.get("text")) or ("[media]" if last.get("media_count") else ""))[:200]
+        try:
+            f["last_at"] = datetime.fromisoformat(str(last.get("created_at", "")).replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            f["last_at"] = time.time()
+        f["chat"] = [{"from": "creator" if m.get("is_sent_by_me") else "fan",
+                      "text": (clean(m.get("text")) or ("[media]" if m.get("media_count") else ""))[:400],
+                      "at": m.get("created_at", ""), "price": m.get("price")} for m in reversed(items[:HISTORY])]
+
+    def history_of(self, items):
+        out = []
+        for m in reversed(items[:HISTORY]):
+            text = clean(m.get("text"))[:600]
+            if m.get("media_count"):
+                text = ("[media] " + text).strip()
+            if text:
+                out.append({"from": "creator" if m.get("is_sent_by_me") else "fan", "text": text, "at": m.get("created_at", "")})
+        return out
+
+    def queue(self, p, fid, kind, incoming="", history=None, task=""):
+        pid = str(p["id"])
+        f = self.fan(pid, fid)
+        if history is None:
+            history = [dict(h) for h in f.get("chat", []) if h.get("text")]
+        with self.lock:
+            self.state["inbox"][f"{pid}:{fid}"] = {
+                "profile_id": pid, "profile": p["name"], "fan_id": fid, "kind": kind, "task": task,
+                "incoming": incoming, "history": history, "stage": f["stage"], "turns": f.get("turns", 0),
+                "heat": f.get("heat", 0), "notes": f.get("notes", ""), "tags": f.get("tags", []),
+                "spent": f.get("spent", 0), "queued_at": time.time()}
 
     def on_new(self, p, fid, items, new):
         pid = str(p["id"])
@@ -329,26 +390,16 @@ class Chatter:
         if flags:
             self.do_handoff(p, fid, f"stop words: {', '.join(flags)}", incoming)
             return
-        history = []
-        for m in reversed(items[:HISTORY]):
-            text = clean(m.get("text"))[:600]
-            if m.get("media_count"):
-                text = ("[media] " + text).strip()
-            if text:
-                history.append({"from": "creator" if m.get("is_sent_by_me") else "fan", "text": text,
-                                "at": m.get("created_at", "")})
-        with self.lock:
-            self.state["inbox"][f"{pid}:{fid}"] = {
-                "profile_id": pid, "profile": p["name"], "fan_id": fid, "incoming": incoming,
-                "history": history, "stage": f["stage"], "turns": f.get("turns", 0), "heat": f.get("heat", 0),
-                "notes": f.get("notes", ""), "queued_at": time.time()}
+        f["replied_since_offer"] = True
+        history = [dict(h) for h in f.get("chat", []) if h.get("text")] if pid == "demo" else self.history_of(items)
+        self.queue(p, fid, "reply", incoming, history)
 
     def do_handoff(self, p, fid, why, incoming=""):
         pid = str(p["id"])
         f = self.fan(pid, fid)
         f["paused"], f["paused_at"] = True, time.time()
         self.state["inbox"].pop(f"{pid}:{fid}", None)
-        self.stat("handoff")
+        self.stat("handoff", 1, pid)
         self.log(f"[{p['name']}] HANDOFF fan {fid}: {why}")
         self.tg(f"{p['name']} (@{p.get('username', '')}) - fan {fid} needs a human\nWhy: {why}\n"
                 f"Heat: {f.get('heat', 0)}/10\nLast from him: {incoming[:300]}\nNotes: {(f.get('notes') or '-')[:300]}\n"
@@ -363,8 +414,8 @@ class Chatter:
             out = []
             for it in items:
                 p = self.profile(it["profile_id"])
-                out.append(dict(it, min_turns_before_tease=MIN_TURNS_BEFORE_TEASE,
-                                test_mode=bool(p.get("test_mode", True))))
+                out.append(dict(it, kind=it.get("kind", "reply"), min_turns_before_tease=MIN_TURNS_BEFORE_TEASE,
+                                test_mode=bool(p.get("test_mode", True)), ppv_on=bool(p.get("ppv_on")) and bool(p.get("vault"))))
             return out
 
     def tone(self, pid):
@@ -410,6 +461,9 @@ class Chatter:
             pass
         test = bool(p.get("test_mode", True))
         if test:
+            f.setdefault("chat", []).extend({"from": "creator", "text": m, "at": datetime.now().isoformat()} for m in msgs)
+            f["chat"] = f["chat"][-HISTORY:]
+            f["last_from_me"], f["last_at"] = True, time.time()
             self.log(f"[{p['name']}] TEST -> fan {fid} [{f['stage']} heat {f['heat']}]: " + " | ".join(msgs))
         else:
             sent = []
@@ -431,17 +485,22 @@ class Chatter:
                     time.sleep(random.uniform(*CASCADE_GAP))
             self.log(f"[{p['name']}] SENT -> fan {fid} [{f['stage']} heat {f['heat']}]: " + " | ".join(sent))
         f["turns"] = f.get("turns", 0) + 1
-        self.stat("replies")
+        f["followup_for"] = None
+        self.stat("replies", 1, pid)
         self.state["inbox"].pop(key, None)
         result = {"ok": True, "test_mode": test, "turns": f["turns"]}
         if wants_free:
             self.cfg["muted"].append(key)
             self.save_cfg()
-            self.stat("free")
+            f["wants_free"] = True
+            self.stat("free", 1, pid)
             self.log(f"[{p['name']}] fan {fid} wants free - muted")
             result["muted"] = True
+        elif (asked or buying_intent) and p.get("ppv_on") and p.get("vault") and not f.get("wants_free"):
+            self.stat("leads", 1, pid)
+            result["next"] = "fan is hot - on his next message offer an item with send_ppv"
         elif asked or buying_intent:
-            self.stat("leads")
+            self.stat("leads", 1, pid)
             self.do_handoff(p, fid, "asked THE QUESTION" if asked else "fan wants to buy / asked price", incoming)
             result["handed_off"] = True
         self.save()
@@ -484,6 +543,11 @@ class Chatter:
                                             "test_mode": True, "tone_file": os.path.join(APP_DIR, "tone_example.txt")})
             self.save_cfg()
         p = self.profile("demo")
+        if not p.get("vault"):
+            p["ppv_on"] = True
+            p["vault"] = [{"id": "d1", "title": "Bikini on the beach (5 photos)", "price": 12, "media": ""},
+                          {"id": "d2", "title": "Shower video 3 min", "price": 25, "media": ""}]
+            self.save_cfg()
         ps = self.pstate("demo")
         fid = "demo-fan"
         text = text or random.choice(self.DEMO_LINES)
@@ -499,6 +563,9 @@ class Chatter:
         mid = int(time.time() * 1000)
         items = [{"id": mid, "text": text, "is_sent_by_me": False, "created_at": datetime.now().isoformat()}]
         ps["seen"][fid] = mid
+        prev = self.fan("demo", fid).get("chat", [])
+        self.touch("demo", fid, items)
+        self.fan("demo", fid)["chat"] = (prev + self.fan("demo", fid)["chat"])[-HISTORY:]
         self.on_new(p, fid, items, items)
         self.save()
         return {"ok": True, "fan_id": fid, "text": text}
@@ -512,6 +579,179 @@ class Chatter:
                               "test_mode": p.get("test_mode", True), "tone_file": p.get("tone_file", "")}
                              for p in self.cfg["profiles"]],
                 "muted": self.cfg["muted"], "log": self.logs[-60:]}
+
+    # ---- follow-ups
+    def check_followups(self):
+        now_t = time.time()
+        for p in self.cfg["profiles"]:
+            hrs = float(p.get("followup_hours") or 0)
+            if not p.get("enabled") or hrs <= 0:
+                continue
+            pid = str(p["id"])
+            ps = self.pstate(pid)
+            for fid, f in ps["fans"].items():
+                if (not f.get("last_from_me") or not f.get("turns") or f.get("wants_free") or self.is_paused(f)
+                        or self.is_muted(pid, fid) or f"{pid}:{fid}" in self.state["inbox"]
+                        or f.get("followup_for") == f.get("last_id") or now_t - f.get("last_at", now_t) < hrs * 3600
+                        or now_t - f.get("last_at", 0) > 7 * 86400):
+                    continue
+                f["followup_for"] = f.get("last_id")
+                self.queue(p, fid, "followup", task=f"He has been quiet for {int((now_t - f['last_at']) / 3600)} h after your last message.")
+                self.log(f"[{p['name']}] follow-up queued for fan {fid}")
+
+    # ---- paid content
+    def vault(self, pid):
+        p = self.profile(pid)
+        return {"ppv_on": bool(p.get("ppv_on")), "items": p.get("vault", [])}
+
+    def send_ppv(self, pid, fid, item_id, message):
+        self.last_claude = time.time()
+        p = self.profile(pid)
+        fid = str(fid)
+        f = self.fan(pid, fid)
+        key = f"{pid}:{fid}"
+        if not p.get("ppv_on"):
+            return {"rejected": True, "reason": "paid content is off for this model - do not offer"}
+        item = next((x for x in p.get("vault", []) if str(x.get("id")) == str(item_id)), None)
+        if not item:
+            return {"rejected": True, "reason": "unknown item_id - use get_vault"}
+        if f.get("wants_free") or self.is_muted(pid, fid) or self.is_paused(f):
+            return {"rejected": True, "reason": "this fan must not get offers"}
+        if f.get("offers") and not f.get("replied_since_offer", True):
+            return {"rejected": True, "reason": "he has not answered your last offer yet - just chat"}
+        text = re.sub(r"\s+", " ", str(message or "")).strip()[:300] or "made this just for you 😏"
+        price = float(item.get("price") or 0)
+        if price < 3:
+            return {"rejected": True, "reason": "item has no valid price - ask the agency to fix the vault"}
+        media = [m.strip() for m in str(item.get("media", "")).split(",") if m.strip()]
+        if p.get("test_mode", True):
+            self.log(f"[{p['name']}] TEST PPV -> fan {fid}: {item.get('title')} ${price:g} | {text}")
+        else:
+            st, d = self.om().send(pid, fid, text, price=price, media=media)
+            if st not in (200, 202):
+                return {"rejected": True, "reason": f"OnlyMonster error {st}: {d}"}
+            self.log(f"[{p['name']}] PPV SENT -> fan {fid}: {item.get('title')} ${price:g} | {text}")
+        f.setdefault("offers", []).append({"item": item.get("id"), "title": item.get("title"), "price": price, "at": time.time(), "bought": False})
+        f["replied_since_offer"] = False
+        f["turns"] = f.get("turns", 0) + 1
+        self.state["inbox"].pop(key, None)
+        self.stat("ppv_offers", 1, pid)
+        self.tg(f"{p['name']}: offered \"{item.get('title')}\" ${price:g} to fan {fid}\nhttps://onlyfans.com/my/chats/chat/{fid}")
+        self.save()
+        return {"ok": True, "test_mode": bool(p.get("test_mode", True))}
+
+    # ---- fans (CRM)
+    def fans(self, pid):
+        out = []
+        for fid, f in self.pstate(pid)["fans"].items():
+            out.append({"fan_id": fid, "stage": f.get("stage"), "heat": f.get("heat", 0), "turns": f.get("turns", 0),
+                        "spent": f.get("spent", 0), "tags": f.get("tags", []), "notes": f.get("notes", ""),
+                        "last_at": f.get("last_at"), "last_text": f.get("last_text", ""), "last_from_me": f.get("last_from_me"),
+                        "paused": bool(self.is_paused(f)), "muted": self.is_muted(pid, fid), "wants_free": bool(f.get("wants_free")),
+                        "offers": f.get("offers", []), "chat": f.get("chat", [])})
+        out.sort(key=lambda x: -(x["last_at"] or 0))
+        return out
+
+    def fan_update(self, pid, fid, b):
+        f = self.fan(pid, fid)
+        if "notes" in b:
+            f["notes"] = str(b["notes"])[:2000]
+        if "tags" in b:
+            f["tags"] = [str(t).strip() for t in b["tags"] if str(t).strip()][:10]
+        if b.get("unpause"):
+            f["paused"] = False
+        if "mute" in b:
+            self.mute(pid, fid, bool(b["mute"]))
+        if b.get("bought") is not None:
+            i = int(b["bought"])
+            offers = f.get("offers", [])
+            if 0 <= i < len(offers) and not offers[i].get("bought"):
+                offers[i]["bought"] = True
+                f["spent"] = round(f.get("spent", 0) + offers[i]["price"], 2)
+                self.stat("purchases", 1, pid)
+                self.stat("revenue", offers[i]["price"], pid)
+        if b.get("spent_add"):
+            f["spent"] = round(f.get("spent", 0) + float(b["spent_add"]), 2)
+            self.stat("revenue", float(b["spent_add"]), pid)
+        self.save()
+        return {"ok": True}
+
+    # ---- broadcasts
+    def segment(self, pid, seg):
+        now_t = time.time()
+        out = []
+        for x in self.fans(pid):
+            if x["muted"] or x["paused"] or x["wants_free"]:
+                continue
+            if seg.get("stage") and x["stage"] != seg["stage"]:
+                continue
+            if seg.get("tag") and seg["tag"] not in x["tags"]:
+                continue
+            if seg.get("silent_days") and now_t - (x["last_at"] or now_t) < float(seg["silent_days"]) * 86400:
+                continue
+            if seg.get("min_spent") and x["spent"] < float(seg["min_spent"]):
+                continue
+            out.append(x["fan_id"])
+        return out
+
+    def broadcast(self, pid, seg, text, personalize, item_id=None):
+        p = self.profile(pid)
+        fans = self.segment(pid, seg)
+        if not fans:
+            return {"ok": False, "count": 0, "error": "no fans in this group"}
+        if personalize:
+            for fid in fans:
+                self.queue(p, fid, "broadcast", task=text)
+            self.log(f"[{p['name']}] broadcast: {len(fans)} fans queued for Claude")
+            return {"ok": True, "count": len(fans), "mode": "claude"}
+        item = next((x for x in p.get("vault", []) if str(x.get("id")) == str(item_id)), None) if item_id else None
+
+        def run():
+            sent = 0
+            for fid in fans:
+                if p.get("test_mode", True):
+                    self.log(f"[{p['name']}] TEST BROADCAST -> fan {fid}: {text}" + (f" + PPV {item['title']} ${item['price']}" if item else ""))
+                else:
+                    media = [m.strip() for m in str((item or {}).get("media", "")).split(",") if m.strip()]
+                    st, d = self.om().send(pid, fid, text, price=float(item["price"]) if item else None, media=media)
+                    if st not in (200, 202):
+                        self.log(f"[{p['name']}] broadcast to {fid} failed: {st}")
+                        continue
+                    time.sleep(random.uniform(8, 20))
+                sent += 1
+            self.stat("broadcast", sent, pid)
+            self.log(f"[{p['name']}] broadcast done: {sent}/{len(fans)}")
+            self.save()
+        threading.Thread(target=run, daemon=True).start()
+        return {"ok": True, "count": len(fans), "mode": "text"}
+
+    # ---- reports
+    def report_text(self, day=None):
+        day = day or datetime.now().strftime("%Y-%m-%d")
+        per = self.state.get("stats_p", {}).get(day, {})
+        lines = [f"Звіт DUCK AI Chatter за {day}"]
+        for p in self.cfg["profiles"]:
+            d = per.get(str(p["id"]))
+            if not d:
+                continue
+            lines.append(f"\n{p['name']}: відповідей {d.get('replies', 0):g}, гарячих {d.get('leads', 0):g}, "
+                         f"людині {d.get('handoff', 0):g}, PPV запропоновано {d.get('ppv_offers', 0):g}, "
+                         f"куплено {d.get('purchases', 0):g}, дохід ${d.get('revenue', 0):g}, розсилка {d.get('broadcast', 0):g}")
+        if len(lines) == 1:
+            lines.append("Сьогодні активності не було.")
+        return "\n".join(lines)
+
+    def maybe_report(self):
+        h = self.cfg.get("report_hour")
+        if h in (None, "", -1):
+            return
+        now_d = datetime.now()
+        day = now_d.strftime("%Y-%m-%d")
+        if now_d.hour >= int(h) and self.state.get("last_report") != day:
+            self.state["last_report"] = day
+            self.tg(self.report_text(day))
+            self.log("Daily report sent to Telegram")
+            self.save()
 
     def setup(self):
         """Checklist for the Home screen."""
@@ -600,6 +840,15 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, C.get_inbox(int(q.get("limit", 10)), "ui" not in q))
             if u.path == "/api/tone":
                 return self.send(200, C.tone(q["profile_id"]))
+            if u.path == "/api/fans":
+                return self.send(200, C.fans(q["profile_id"]))
+            if u.path == "/api/vault":
+                return self.send(200, C.vault(q["profile_id"]))
+            if u.path == "/api/report":
+                return self.send(200, {"text": C.report_text()})
+            if u.path == "/api/segment":
+                seg = {k: q[k] for k in ("stage", "tag", "silent_days", "min_spent") if q.get(k)}
+                return self.send(200, {"count": len(C.segment(q["profile_id"], seg))})
             if u.path == "/api/setup":
                 return self.send(200, C.setup())
             if u.path == "/api/accounts":
@@ -627,7 +876,7 @@ class H(BaseHTTPRequestHandler):
                     for k, v in b.items():
                         if k in SECRET_FIELDS and v in ("", "set"):
                             continue
-                        if k in ("om_token", "tg_token", "tg_chat", "poll_seconds", "fans_per_cycle", "handoff_keywords", "profiles"):
+                        if k in ("om_token", "tg_token", "tg_chat", "poll_seconds", "fans_per_cycle", "handoff_keywords", "profiles", "report_hour"):
                             C.cfg[k] = v
                 C.save_cfg()
                 return self.send(200, {"ok": True})
@@ -635,6 +884,16 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, C.send_reply(b["profile_id"], b["fan_id"], b.get("messages"), b.get("stage", ""),
                                                    b.get("heat", 0), b.get("notes", ""), b.get("asked_to_see", False),
                                                    b.get("buying_intent", False), b.get("wants_free", False)))
+            if u.path == "/api/ppv":
+                return self.send(200, C.send_ppv(b["profile_id"], b["fan_id"], b["item_id"], b.get("message", "")))
+            if u.path == "/api/fan_update":
+                return self.send(200, C.fan_update(b["profile_id"], b["fan_id"], b))
+            if u.path == "/api/broadcast":
+                return self.send(200, C.broadcast(b["profile_id"], b.get("segment", {}), b.get("text", ""),
+                                                  bool(b.get("personalize")), b.get("item_id")))
+            if u.path == "/api/report_now":
+                C.tg(C.report_text())
+                return self.send(200, {"ok": True})
             if u.path == "/api/connect_claude":
                 return self.send(200, C.connect_claude())
             if u.path == "/api/demo":

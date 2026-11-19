@@ -53,6 +53,19 @@ def send_reply(profile_id: str, fan_id: str, messages: list[str], stage: str, he
 
 
 @mcp.tool()
+def get_vault(profile_id: str) -> dict:
+    """Paid content items of the model (id, title, price) and whether paid offers are on."""
+    return _req("GET", f"/api/vault?profile_id={profile_id}")
+
+
+@mcp.tool()
+def send_ppv(profile_id: str, fan_id: str, item_id: str, message: str) -> dict:
+    """Offer one paid item from the vault to a hot fan. message = one short teasing line, no price.
+    Rejected if paid content is off, the fan wanted free stuff, or he has not answered the last offer."""
+    return _req("POST", "/api/ppv", {"profile_id": profile_id, "fan_id": fan_id, "item_id": item_id, "message": message})
+
+
+@mcp.tool()
 def skip(profile_id: str, fan_id: str, reason: str = "") -> dict:
     """Remove a fan from the inbox without replying."""
     return _req("POST", "/api/skip", {"profile_id": profile_id, "fan_id": fan_id, "reason": reason})
@@ -104,7 +117,8 @@ def set_poll_interval(seconds: int) -> dict:
 def work_shift() -> str:
     """One pass of the chatter shift."""
     return ("Run one DUCK AI Chatter pass: call get_inbox. For each fan: get_voice for its profile (once), "
-            "read the history, then send_reply in the model's voice following the playbook, or handoff/skip. "
+            "read the history, then send_reply (or send_ppv for hot fans when ppv_on) in the model's voice following the playbook, "
+            "or handoff/skip. "
             "If the inbox is empty, say 'inbox empty' in one line.")
 
 
