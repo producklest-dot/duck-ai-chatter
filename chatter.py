@@ -547,6 +547,9 @@ class H(BaseHTTPRequestHandler):
             if u.path in ("/", "/index.html"):
                 with open(os.path.join(APP_DIR, "ui.html"), "rb") as f:
                     return self.send(200, f.read(), "text/html; charset=utf-8")
+            if u.path == "/logo.jpg":
+                with open(os.path.join(APP_DIR, "logo.jpg"), "rb") as f:
+                    return self.send(200, f.read(), "image/jpeg")
             if u.path == "/api/status":
                 return self.send(200, C.summary())
             if u.path == "/api/config":

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DUCK AI Chatter</title>
+<title>DUCK AI Chatter</title><link rel="icon" href="/logo.jpg">
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* Ogonek notebook structure x DUCK TRAFF: monochrome ink, one accent (DUCK blue), red margin = Ogonek signature */
@@ -25,7 +25,7 @@ body{min-height:100vh}
 .top{position:sticky;top:0;z-index:5;padding:12px 24px 0;background:linear-gradient(var(--bg) 70%,transparent)}
 .bar{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px 10px 16px}
 .logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;letter-spacing:-.01em}
-.logo i{width:32px;height:32px;border-radius:9px;background:var(--acc);display:grid;place-items:center;font-style:normal;position:relative}.logo small{display:block;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase}.logo span{line-height:1.1}
+.logo i{width:38px;height:38px;border-radius:50%;overflow:hidden;display:block;flex:none;box-shadow:0 0 0 2px var(--acc)}.logo i img{width:100%;height:100%;object-fit:cover;transform:scale(1.12);display:block}.logo small{display:block;font:500 10px var(--mono);color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase}.logo span{line-height:1.1}
 .logo i::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
 .sp{flex:1}
 /* hero */
@@ -85,7 +85,7 @@ input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px;vertical-ali
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
 <div class="top"><div class="bar">
-  <div class="logo"><i><svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true"><path fill="#fff" d="M19.5 6.5a6 6 0 0 0-6 6c0 1.3.4 2.4 1 3.4C10 16 6 18.4 6 22.5 6 26 9.5 27.5 15 27.5c6.3 0 10.5-2.6 10.5-7 0-2.4-1.3-4-3.1-5 .7-.9 1.1-2 1.1-3.1v-.3l3.6-1.3-3.9-1.4A6 6 0 0 0 19.5 6.5z"/><circle cx="20.4" cy="11.3" r="1.3" fill="#0082F3"/></svg></i><span><small>DUCK TRAFF</small>AI Chatter</span></div>
+  <div class="logo"><i><img src="/logo.jpg" alt=""></i><span><small>DUCK TRAFF</small>AI Chatter</span></div>
   <span id="run" class="pill">stopped</span>
   <span id="claude" class="pill">Claude: not connected</span>
   <span class="sp"></span>
