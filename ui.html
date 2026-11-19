@@ -1,42 +1,101 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DUCK AI Chatter</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Fira+Code:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0b0c;--card:#141416;--line:#26262a;--tx:#ededee;--mute:#8a8a90;--acc:#0082f3;--ok:#2fbf71;--bad:#e5484d}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 "Inter Tight",system-ui,sans-serif}
-header{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}h1 span{color:var(--acc)}
-h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);margin:0 0 12px;font-weight:600}
-main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px;max-width:1300px}
-@media(max-width:900px){main{grid-template-columns:1fr;padding:16px}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+/* Ogonek notebook structure x DUCK TRAFF: monochrome ink, one accent (DUCK blue), red margin = Ogonek signature */
+:root{
+  --bg:#0A0D10;--card:#12171C;--field:#0D1115;--side:#161C22;
+  --ink:#E8EAEC;--ink-2:#B9C0C6;--ink-3:#7E8A94;--line:#222B33;
+  --acc:#0082F3;--acc-soft:rgba(0,130,243,.14);--on-acc:#fff;
+  --red:#CF1717;--red-soft:rgba(207,23,23,.14);--ok:#7FB8EF;
+  --grid-line:rgba(193,197,201,.06);--grid-margin:rgba(240,106,106,.30);--grid:24px;
+  --script:"Caveat","Bradley Hand",cursive;--mono:"Fira Code",ui-monospace,monospace;--body:"Inter Tight",system-ui,sans-serif;
+  --ease:cubic-bezier(.22,1,.36,1);color-scheme:dark}
+:root[data-theme="light"]{
+  --bg:#DADBDD;--card:#F4F5F6;--field:#E7E8EA;--side:#EEEFF0;
+  --ink:#0A1418;--ink-2:#2B4250;--ink-3:#475D6B;--line:#C1C5C9;
+  --acc:#0070D6;--acc-soft:#D6E8FA;--ok:#0070D6;
+  --grid-line:rgba(116,141,156,.22);--grid-margin:rgba(207,23,23,.38);color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+body{min-height:100vh}
+::selection{background:var(--acc);color:#fff}
+/* top bar */
+.top{position:sticky;top:0;z-index:5;padding:12px 24px 0;background:linear-gradient(var(--bg) 70%,transparent)}
+.bar{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px 10px 16px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;letter-spacing:-.01em}
+.logo i{width:30px;height:30px;border-radius:9px;background:var(--acc);display:grid;place-items:center;font:500 12px var(--mono);color:#fff;font-style:normal;position:relative}
+.logo i::after{content:"";position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
+.sp{flex:1}
+/* hero */
+.hero{max-width:1240px;margin:22px auto 4px;padding:0 24px}
+.hero h1{font:600 clamp(40px,5vw,58px)/1 var(--script);margin:0;display:inline-block;position:relative}
+.hero h1::after{content:"";position:absolute;left:4px;right:30%;bottom:-6px;height:3px;border-radius:3px;background:var(--red);transform:rotate(-1.2deg)}
+.hero p{color:var(--ink-3);margin:14px 0 0;max-width:640px}
+/* layout */
+main{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 24px 48px;max-width:1288px;margin:0 auto}
+@media(max-width:900px){main{grid-template-columns:1fr;padding:12px 16px 40px}.top{padding:10px 16px 0}.hero{padding:0 16px}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;animation:in .4s var(--ease) both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.card.paper{background-color:var(--card);
+  background-image:linear-gradient(90deg,transparent calc(100% - 34px),var(--grid-margin) calc(100% - 34px),var(--grid-margin) calc(100% - 32px),transparent calc(100% - 32px)),
+  linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:100% 100%,var(--grid) var(--grid),var(--grid) var(--grid);padding-right:56px}
+@media(max-width:600px){.card.paper{background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:var(--grid) var(--grid);padding-right:24px}}
 .full{grid-column:1/-1}
-button{background:#1d1d20;color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font:inherit;cursor:pointer}
-button:hover{border-color:var(--acc)}button.pri{background:var(--acc);border-color:var(--acc);color:#fff}button.stop{background:var(--bad);border-color:var(--bad);color:#fff}
-input,select,textarea{background:#0f0f11;color:var(--tx);border:1px solid var(--line);border-radius:7px;padding:7px 9px;font:inherit;width:100%}
-label{display:block;color:var(--mute);font-size:12px;margin:10px 0 4px}
+h2{font:600 28px/1.1 var(--script);margin:0 0 14px;letter-spacing:0}
+.label{font:500 11px var(--mono);color:var(--ink-3);text-transform:none}
+/* controls */
+button{font:500 14px var(--body);color:var(--ink);background:var(--side);border:1px solid var(--line);border-radius:11px;padding:9px 14px;cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
+button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+button.pri:hover{filter:brightness(1.08)}
+button.stop{background:transparent;border-color:var(--red);color:var(--red)}
+button.icon{padding:9px 11px}
+input,select,textarea{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:9px 11px;font:inherit;width:100%;transition:border-color .15s var(--ease)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+label{display:block;color:var(--ink-3);font:500 12px var(--mono);margin:14px 0 6px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
-.pill{padding:3px 9px;border-radius:99px;font-size:12px;border:1px solid var(--line);color:var(--mute)}
-.pill.on{color:var(--ok);border-color:var(--ok)}.pill.off{color:var(--bad);border-color:var(--bad)}
-.stats{display:flex;gap:18px}.stats b{display:block;font-size:22px}.stats span{color:var(--mute);font-size:12px}
-.log{font:12px/1.5 ui-monospace,Menlo,monospace;max-height:340px;overflow:auto;white-space:pre-wrap;color:#c9c9cc}
-.prof{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px}
-.prof .row>*{flex:initial}.grow{flex:1!important}
-code{background:#0f0f11;border:1px solid var(--line);border-radius:6px;padding:8px;display:block;white-space:pre-wrap;font-size:12px}
-.muted{color:var(--mute);font-size:12px}.sp{flex:1}
-.inb{border-bottom:1px solid var(--line);padding:8px 0}.inb:last-child{border:0}
+.grow{flex:1!important}
+/* status pills */
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;font:500 12px var(--mono);border:1px solid var(--line);color:var(--ink-3);background:var(--field)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink-3)}
+.pill.on{color:var(--ok);border-color:var(--acc-soft)}.pill.on::before{background:var(--acc);animation:pulse 1.6s infinite}
+.pill.off::before{background:var(--red)}
+@keyframes pulse{50%{opacity:.35}}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.stats div{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 10px}
+.stats b{display:block;font:500 26px/1 var(--mono);font-variant-numeric:tabular-nums}
+.stats span{color:var(--ink-3);font-size:12px}
+.stats div:nth-child(2) b{color:var(--acc)}
+@media(max-width:600px){.stats{grid-template-columns:repeat(3,1fr)}}
+/* misc */
+.log{font:12px/1.65 var(--mono);max-height:360px;overflow:auto;white-space:pre-wrap;color:var(--ink-2);background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.prof{background:var(--field);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+.prof .row>*{flex:initial}
+.prof b{font-weight:600}
+code{font:12px/1.55 var(--mono);background:var(--field);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:10px;padding:10px 12px;display:block;white-space:pre-wrap;color:var(--ink-2)}
+.muted{color:var(--ink-3);font-size:13px}
+.inb{border-bottom:1px dashed var(--line);padding:10px 0}.inb:last-child{border:0}
+.inb b{font-weight:600}
+.empty{font:600 22px var(--script);color:var(--ink-3);padding:10px 0}
+input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px;vertical-align:-3px;margin-right:6px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style></head><body>
-<header>
-  <h1>DUCK <span>AI</span> Chatter</h1>
+<div class="top"><div class="bar">
+  <div class="logo"><i>AI</i>DUCK AI Chatter</div>
   <span id="run" class="pill">stopped</span>
   <span id="claude" class="pill">Claude: not connected</span>
   <span class="sp"></span>
-  <button id="toggle" class="pri">Start</button>
+  <button class="icon" id="theme" title="Light / dark">◐</button>
   <button onclick="post('/api/check_now',{})">Check now</button>
-</header>
+  <button id="toggle" class="pri">Start</button>
+</div></div>
+<div class="hero"><h1>Chatter workspace</h1><p>The app checks fans, Claude writes the replies, hot leads go to you in Telegram.</p></div>
 <main>
-  <section class="card">
+  <section class="card paper">
     <h2>Today</h2>
     <div class="stats" id="stats"></div>
     <label>Check fans every</label>
@@ -58,7 +117,7 @@ code{background:#0f0f11;border:1px solid var(--line);border-radius:6px;padding:8
     <div class="row"><h2 class="grow">Models</h2><button onclick="loadAccounts()">Load accounts from OnlyMonster</button></div>
     <div id="profiles"></div>
   </section>
-  <section class="card">
+  <section class="card paper">
     <h2>Inbox (waiting for Claude)</h2><div id="inbox" class="muted">empty</div>
     <h2 style="margin-top:16px">Test without real fans</h2>
     <div class="muted">Creates a fake fan message for "Demo model". Always test mode - nothing goes to OnlyFans.</div>
@@ -119,8 +178,10 @@ async function refresh(){
   $('stats').innerHTML=[['replies','Replies'],['leads','Hot leads'],['handoff','Handoffs'],['free','Wanted free']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('')+`<div><b>${S.inbox}</b><span>In inbox</span></div>`;
   $('log').textContent=(S.log||[]).slice().reverse().join('\n');
   const inb=await get('/api/inbox?limit=20&ui=1');
-  $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> · fan ${esc(x.fan_id)} · ${esc(x.stage)} · heat ${x.heat}<br>${esc(x.incoming)}</div>`).join(''):'empty';
+  $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> · fan ${esc(x.fan_id)} · ${esc(x.stage)} · heat ${x.heat}<br>${esc(x.incoming)}</div>`).join(''):'<div class="empty">nothing waiting</div>';
 }
+try{if(localStorage.dacTheme)document.documentElement.dataset.theme=localStorage.dacTheme}catch(e){}
+$('theme').onclick=()=>{const t=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=t;try{localStorage.dacTheme=t}catch(e){}};
 $('toggle').onclick=()=>post('/api/run',{on:!S.running});
-(async()=>{CFG=await get('/api/config');setInterval(async()=>{const c=await get('/api/config');if(JSON.stringify(c.profiles)!==JSON.stringify(CFG.profiles)){CFG=c;drawCfg()}},4000);S.py='/Volumes/CLAUDE/2_Apps/_venvs/duck-chatter/bin/python';S.mcp='/Volumes/CLAUDE/2_Apps/duck-ai-chatter/mcp_server.py';drawCfg();refresh();setInterval(refresh,3000)})();
+(async()=>{CFG=await get('/api/config');setInterval(async()=>{const c=await get('/api/config');if(JSON.stringify(c.profiles)!==JSON.stringify(CFG.profiles)){CFG=c;drawCfg()}},4000);S.py='~/.duck-ai-chatter-venv/bin/python';S.mcp='/Volumes/CLAUDE/2_Apps/duck-ai-chatter/mcp_server.py';drawCfg();refresh();setInterval(refresh,3000)})();
 </script></body></html>
