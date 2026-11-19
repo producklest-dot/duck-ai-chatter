@@ -176,6 +176,32 @@ class OnlyMonster:
     def messages(self, aid, chat_id, limit):
         return self._get(f"/api/v0/accounts/{aid}/chats/{chat_id}/messages?limit={limit}&order=desc", aid).get("items", [])
 
+    def vault_folders(self, aid):
+        out, off = [], 0
+        while off < 500:
+            items = self._get(f"/api/v0/accounts/{aid}/vault/folders?limit=10&offset={off}", aid).get("items", [])
+            out += items
+            if len(items) < 10:
+                break
+            off += 10
+        return out
+
+    def folder_medias(self, aid, folder_id, limit=50):
+        out, off = [], 0
+        while len(out) < limit:
+            items = self._get(f"/api/v0/accounts/{aid}/vault/folders/{folder_id}/medias?limit=10&offset={off}", aid).get("items", [])
+            out += items
+            if len(items) < 10:
+                break
+            off += 10
+        return out[:limit]
+
+    def thumbnail(self, aid, media_id):
+        req = urllib.request.Request(f"{OM_BASE}/api/v0/accounts/{aid}/vault/media/{media_id}/thumbnail",
+                                     headers={"x-om-auth-token": self.token})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.read(), r.headers.get("Content-Type", "image/jpeg")
+
     def send(self, aid, chat_id, text, price=None, media=None):
         body = {"text": text, "price": price, "locked_text": False, "media": media or []}
         return self._call("POST", f"/api/v0/accounts/{aid}/chats/{chat_id}/messages", body=body, aid=aid)
@@ -640,6 +666,31 @@ class Chatter:
         self.save()
         return {"ok": True, "test_mode": bool(p.get("test_mode", True))}
 
+    def vault_folders(self, pid):
+        out = []
+        for f in self.om().vault_folders(str(pid)):
+            n = f.get("photos_count", 0) + f.get("videos_count", 0)
+            if n and f.get("type") == "custom":
+                out.append({"id": f["id"], "name": f.get("name", ""), "photos": f.get("photos_count", 0),
+                            "videos": f.get("videos_count", 0)})
+        return out
+
+    def vault_import(self, pid, folder_id, name, max_media=20, price=15):
+        p = self.profile(pid)
+        medias = [m for m in self.om().folder_medias(str(pid), folder_id, int(max_media)) if m.get("is_ready", True) and not m.get("has_error")]
+        if not medias:
+            return {"ok": False, "error": "folder is empty"}
+        ph = sum(1 for m in medias if m.get("type") == "photo")
+        vd = sum(1 for m in medias if m.get("type") == "video")
+        parts = ([f"{ph} photo"] if ph else []) + ([f"{vd} video"] if vd else [])
+        item = {"id": f"f{folder_id}-{int(time.time())}", "title": f"{name} ({', '.join(parts)})", "price": price,
+                "media": ",".join(str(m["id"]) for m in medias), "folder": folder_id,
+                "thumbs": [str(m["id"]) for m in medias[:4]]}
+        p.setdefault("vault", []).append(item)
+        self.save_cfg()
+        self.log(f"[{p['name']}] vault: added '{item['title']}'")
+        return {"ok": True, "item": item}
+
     # ---- fans (CRM)
     def fans(self, pid):
         out = []
@@ -842,6 +893,11 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, C.tone(q["profile_id"]))
             if u.path == "/api/fans":
                 return self.send(200, C.fans(q["profile_id"]))
+            if u.path == "/api/vault_folders":
+                return self.send(200, C.vault_folders(q["profile_id"]))
+            if u.path == "/api/thumb":
+                img, ctype = C.om().thumbnail(q["profile_id"], q["media_id"])
+                return self.send(200, img, ctype)
             if u.path == "/api/vault":
                 return self.send(200, C.vault(q["profile_id"]))
             if u.path == "/api/report":
@@ -886,6 +942,9 @@ class H(BaseHTTPRequestHandler):
                                                    b.get("buying_intent", False), b.get("wants_free", False)))
             if u.path == "/api/ppv":
                 return self.send(200, C.send_ppv(b["profile_id"], b["fan_id"], b["item_id"], b.get("message", "")))
+            if u.path == "/api/vault_import":
+                return self.send(200, C.vault_import(b["profile_id"], b["folder_id"], b.get("name", "Vault"),
+                                                     b.get("max_media", 20), b.get("price", 15)))
             if u.path == "/api/fan_update":
                 return self.send(200, C.fan_update(b["profile_id"], b["fan_id"], b))
             if u.path == "/api/broadcast":

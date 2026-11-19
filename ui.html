@@ -86,7 +86,9 @@ td{padding:10px 8px;border-bottom:1px dashed var(--line);vertical-align:top}
 tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
 .tg{display:inline-block;font:500 11px var(--mono);padding:2px 8px;border-radius:99px;background:var(--acc-soft);color:var(--acc);margin:0 4px 4px 0}
 .tg.red{background:var(--red-soft);color:var(--red)}
-.vrow{display:grid;grid-template-columns:2fr 90px 1.2fr auto;gap:8px;margin-top:8px}
+.vrow{display:grid;grid-template-columns:auto 2fr 90px 1.2fr auto;gap:8px;margin-top:8px;align-items:center}
+.th{display:flex;gap:3px;width:132px}.th img{width:30px;height:40px;object-fit:cover;border-radius:6px;background:var(--side)}
+.fold{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
 .side{position:fixed;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--card);border-left:1px solid var(--line);z-index:20;padding:20px;overflow:auto;transform:translateX(100%);transition:transform .25s var(--ease)}
 .side.on{transform:none}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -141,7 +143,7 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
       <select id="vaultModel" style="width:auto" onchange="drawVault()"></select></div>
     <label class="switch" style="margin-top:12px"><input type="checkbox" id="ppvOn" onchange="setVaultFlag(this.checked)"><i></i>Claude пропонує платний контент гарячим фанам (вимкнено = гарячий фан іде людині)</label>
     <div id="vault"></div>
-    <div class="row" style="margin-top:12px"><button onclick="addVault()">+ Додати контент</button></div>
+    <div class="row" style="margin-top:12px"><button class="pri" onclick="openVaultPicker()">Підтягнути з Vault</button><button onclick="addVault()">+ Додати вручну</button></div>
   </div>
 </section>
 <section class="tab" id="t-mail">
@@ -319,9 +321,24 @@ function saveFan(fid){fanAct(fid,{notes:$('sNotes').value,tags:$('sTags').value.
 function vp(){return (CFG.profiles||[]).find(x=>String(x.id)===$('vaultModel').value)}
 function drawVault(){const p=vp();if(!p){$('vault').innerHTML='<p class="empty">Немає моделей.</p>';return}
   $('ppvOn').checked=!!p.ppv_on;const v=p.vault||[];
-  $('vault').innerHTML=v.length?`<div class="vrow hint" style="margin-top:14px"><span>Що це (Claude бачить цю назву)</span><span>Ціна $</span><span>Media ID з Vault</span><span></span></div>`+v.map((x,k)=>`<div class="vrow">
+  $('vault').innerHTML=v.length?`<div class="vrow hint" style="margin-top:14px"><span style="width:132px"></span><span>Що це (Claude бачить цю назву)</span><span>Ціна $</span><span>Media ID з Vault</span><span></span></div>`+v.map((x,k)=>`<div class="vrow"><div class="th">${(x.thumbs||[]).map(m=>`<img loading="lazy" src="/api/thumb?profile_id=${encodeURIComponent(p.id)}&media_id=${m}">`).join('')}</div>
     <input value="${esc(x.title)}" onchange="editVault(${k},'title',this.value)"><input type="number" min="3" value="${x.price}" onchange="editVault(${k},'price',+this.value)">
     <input value="${esc(x.media||'')}" placeholder="123,456" onchange="editVault(${k},'media',this.value)"><button onclick="delVault(${k})">✕</button></div>`).join(''):'<p class="empty" style="margin-top:12px">Контенту ще немає.</p>'}
+async function openVaultPicker(){const p=vp();if(!p)return;if(p.id==='demo'){toast('Демо-модель не має Vault. Обери справжню модель');return}
+  $('side').innerHTML=`<div class="row"><h2 style="flex:1">Vault: ${esc(p.name)}</h2><button onclick="$('side').classList.remove('on')">Закрити</button></div>
+  <p class="hint">Кожна папка стане одним PPV. Назву і ціну потім можна змінити.</p>
+  <div class="row"><span class="hint" style="flex:1">Файлів з папки, макс.</span><input id="vMax" type="number" value="10" min="1" max="50" style="width:90px">
+  <span class="hint">Ціна $</span><input id="vPrice" type="number" value="15" min="3" style="width:90px"></div>
+  <div id="vFolders"><p class="empty">Завантажую папки…</p></div>`;
+  $('side').classList.add('on');
+  const fs=await get('/api/vault_folders?profile_id='+encodeURIComponent(p.id));
+  if(fs.error){$('vFolders').innerHTML=`<p class="empty">Не вийшло: ${esc(fs.error)}</p>`;return}
+  const used=new Set((p.vault||[]).map(x=>String(x.folder)));
+  $('vFolders').innerHTML=fs.length?fs.map(f=>`<div class="fold"><div style="flex:1"><b>${esc(f.name)}</b><div class="hint">${f.photos} фото · ${f.videos} відео</div></div>
+    ${used.has(String(f.id))?'<span class="tg">додано</span>':`<button onclick="importFolder(this,${f.id},'${esc(f.name).replace(/'/g,"\\'")}')">Додати</button>`}</div>`).join(''):'<p class="empty">У Vault немає папок з файлами.</p>'}
+async function importFolder(btn,id,name){btn.disabled=true;btn.textContent='…';const p=vp();
+  const r=await post('/api/vault_import',{profile_id:p.id,folder_id:id,name,max_media:+$('vMax').value,price:+$('vPrice').value});
+  if(r.ok){btn.outerHTML='<span class="tg">додано</span>';CFG=await get('/api/config');drawVault();toast('Додано: '+r.item.title)}else{btn.disabled=false;btn.textContent='Додати';toast(r.error||'Не вийшло')}}
 async function saveVault(){await saveCfg({profiles:CFG.profiles});drawVault();toast('Збережено')}
 function setVaultFlag(on){vp().ppv_on=on;saveVault()}
 function editVault(k,f,v){vp().vault[k][f]=v;saveVault()}
