@@ -5,8 +5,9 @@ replies are written by Claude (your Claude subscription) through the MCP server 
 Features: fans CRM, follow-ups, PPV from the OnlyMonster Vault, broadcasts, daily Telegram report, fan simulator.
 
 ## Install on a new Mac
-1. Install Claude Code and log in with your subscription. Install the GitHub CLI and log in: `brew install gh && gh auth login`.
-2. `gh repo clone producklest-dot/duck-ai-chatter ~/Apps/duck-ai-chatter`
+1. Install Claude Code and log in with your Claude subscription.
+2. `git clone https://github.com/producklest-dot/duck-ai-chatter.git ~/Apps/duck-ai-chatter`
+   (or Code -> Download ZIP on GitHub, unzip into ~/Apps/duck-ai-chatter)
 3. Open `~/Apps/duck-ai-chatter/DUCK AI Chatter.app` (first start installs components, 1-2 min;
    if macOS blocks it: right-click -> Open). Optionally drag it to the Dock.
 4. In the app: Settings -> OnlyMonster key (+ Telegram), Models -> Load my models, paste each model's voice.
