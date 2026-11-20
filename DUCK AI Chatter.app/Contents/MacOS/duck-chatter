@@ -1,6 +1,7 @@
 #!/bin/bash
 # Portable launcher: finds the repo folder next to the .app, sets up its own Python env on first run.
 APP_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+[ -f "$APP_DIR/app.py" ] || APP_DIR="$HOME/Apps/duck-ai-chatter"
 VENV="$HOME/.duck-ai-chatter-venv"
 PY="$(command -v python3 || echo /usr/bin/python3)"
 if [ ! -x "$VENV/bin/python" ] || ! "$VENV/bin/python" -c "import webview, mcp" 2>/dev/null; then

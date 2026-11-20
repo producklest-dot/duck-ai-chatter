@@ -107,7 +107,7 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
 </div>
 <nav id="nav">
   <button data-t="home" class="on">Головна</button><button data-t="models">Моделі</button>
-  <button data-t="fans">Фани</button><button data-t="content">Контент</button><button data-t="mail">Розсилки</button><button data-t="try">Спробувати</button><button data-t="settings">Налаштування</button><button data-t="log">Журнал</button>
+  <button data-t="fans">Фани</button><button data-t="mail">Розсилки</button><button data-t="try">Спробувати</button><button data-t="settings">Налаштування</button><button data-t="log">Журнал</button>
 </nav></div>
 <main>
 <section class="tab on" id="t-home">
@@ -118,8 +118,7 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
   <div class="card">
     <h2>Сьогодні</h2><p class="sub">Що бот зробив з півночі.</p>
     <div class="stats" id="stats"></div>
-    <h3 style="margin:22px 0 4px">PPV на підтвердження</h3>
-    <div id="ppvq"></div>
+    <div id="ppvq" style="display:none"></div>
     <h3 style="margin:22px 0 4px">Чекають на відповідь</h3>
     <div id="inbox"></div>
   </div>
@@ -163,11 +162,11 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
     <label class="switch"><input type="checkbox" id="mailAI" checked onchange="$('mailPPV').disabled=this.checked"><i></i>Claude пише кожному особисто (вимкнено = всім однаковий текст)</label>
     <label class="f" id="mailTextLabel">Завдання для Claude / текст</label>
     <textarea id="mailText" rows="3" placeholder="Напр.: напиши, що в неї сьогодні вихідний і вона нудьгує, запитай як у нього справи"></textarea>
-    <label class="f">PPV до тексту (тільки однаковий текст)</label><select id="mailPPV" disabled><option value="">без PPV</option></select>
+    <select id="mailPPV" disabled style="display:none"><option value="">без PPV</option></select>
     <div class="row" style="margin-top:16px"><button class="pri" onclick="sendMail()">Надіслати розсилку</button></div>
   </div>
   <div class="card paper">
-    <h2>Звіти</h2><p class="sub">Щовечора в Telegram: відповіді, гарячі фани, PPV, покупки, дохід по кожній моделі.</p>
+    <h2>Звіти</h2><p class="sub">Щовечора в Telegram: відповіді і скільки чатів передано людині, по кожній моделі.</p>
     <label class="f">Надсилати звіт о</label>
     <select id="repHour" onchange="saveCfg({report_hour:this.value===''?'':+this.value}).then(()=>toast('Збережено'))"><option value="">не надсилати</option></select>
     <div class="row" style="margin-top:14px"><button onclick="post('/api/report_now',{}).then(()=>toast('Звіт надіслано в Telegram'))">Надіслати зараз</button></div>
@@ -291,10 +290,10 @@ async function refresh(){
   S=await get('/api/status');
   $('run').textContent=S.running?'Бот увімкнено':'Бот вимкнено';$('run').className='pill '+(S.running?'on':'off');
   $('toggle').textContent=S.running?'Вимкнути бота':'Увімкнути бота';$('toggle').className=(S.running?'stop':'pri')+' big';
-  const ago=S.claude_seen_ago_s,w=ago!=null&&ago<300;
-  $('claude').textContent=w?'Claude працює':'Claude не працює';$('claude').className='pill '+(w?'on':'off');
+  const ago=S.claude_seen_ago_s,w=!!(CFG&&CFG.brain_on)||(ago!=null&&ago<300);
+  $('claude').textContent=w?'Мозок увімкнено':'Мозок вимкнено';$('claude').className='pill '+(w?'on':'off');
   const t=S.today||{};
-  $('stats').innerHTML=[['replies','Відповідей'],['leads','Гарячих фанів'],['ppv_offers','PPV запропоновано'],['revenue','Дохід, $'],['handoff','Передано людині'],['free','Хотіли безкоштовно'],['purchases','Покупок'],['broadcast','Розсилка']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('');
+  $('stats').innerHTML=[['replies','Відповідей'],['leads','Гарячих фанів'],['handoff','Передано людині'],['free','Хотіли безкоштовно'],['purchases','Покупок'],['broadcast','Розсилка']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('');
   $('log').textContent=(S.log||[]).slice().reverse().join('\n');
   const inb=await get('/api/inbox?limit=20&ui=1');
   $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> <span class="hint">фан ${esc(x.fan_id)}</span><br>${esc(x.incoming)}</div>`).join(''):'<p class="empty">Ніхто не чекає.</p>';
