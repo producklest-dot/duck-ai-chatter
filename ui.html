@@ -197,6 +197,11 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
     <label class="f">Сповіщення в Telegram</label>
     <p class="hint">Гарячі фани і «потрібна людина». Токен бота від @BotFather і твій chat id.</p>
     <input id="tgt" type="password" placeholder="Токен бота"><input id="tgc" placeholder="Chat id" style="margin-top:8px">
+    <label class="f">Ключ Claude API</label>
+    <p class="hint">Програма відповідає сама, без вікна Claude Code. Порожньо = береться ключ із ~/.secrets.</p>
+    <input id="ak" type="password">
+    <label class="switch" style="margin-top:10px"><input type="checkbox" id="brain" onchange="saveCfg({brain_on:this.checked}).then(()=>toast(this.checked?'Мозок увімкнено':'Мозок вимкнено'))"><i></i>Відповідати самій (вбудований Claude)</label>
+    <p class="hint">Сам пише лише легку розмову без сексу. Секс, контент, гроші, вік → одразу людині.</p>
     <div class="row" style="margin-top:16px"><button class="pri" onclick="saveKeys()">Зберегти</button></div>
   </div>
   <div class="card">
@@ -228,7 +233,7 @@ $('nav').onclick=e=>{if(e.target.dataset.t)tab(e.target.dataset.t)};
 const SHIFT=()=>`/loop ${+(CFG.poll_seconds||60)<60?'1m':Math.round((CFG.poll_seconds||60)/60)+'m'} Do a DUCK AI Chatter pass with the duck-chatter tools: get_inbox; for each fan read get_voice once per profile, reply with send_reply (or send_ppv for hot fans when ppv_on) in her voice following the playbook, or handoff/skip. If the inbox is empty, answer only "inbox empty".`;
 async function copyShift(){await navigator.clipboard.writeText(SHIFT());toast('Скопійовано. Встав у Claude і натисни Enter')}
 async function connectClaude(){toast('Підключаю…');const r=await post('/api/connect_claude',{});toast(r.ok?'Claude підключено. Перезапусти Claude один раз':'Не вийшло: '+r.error);loadSetup()}
-async function saveKeys(){await saveCfg({om_token:$('om').value,tg_token:$('tgt').value,tg_chat:$('tgc').value});$('om').value='';$('tgt').value='';toast('Збережено');drawCfg();loadSetup()}
+async function saveKeys(){await saveCfg({om_token:$('om').value,tg_token:$('tgt').value,tg_chat:$('tgc').value,anthropic_key:$('ak').value});$('om').value='';$('ak').value='';$('tgt').value='';toast('Збережено');drawCfg();loadSetup()}
 async function loadAccounts(){const a=await get('/api/accounts');if(a.error){toast('Спершу додай ключ OnlyMonster у Налаштуваннях');tab('settings');return}
   const have=new Set(CFG.profiles.map(p=>String(p.id)));let n=0;
   for(const x of a){if(!have.has(String(x.id))){n++;CFG.profiles.push({id:String(x.id),name:x.name||x.username,username:x.username||'',platform_account_id:x.platform_account_id,enabled:false,test_mode:true,voice:''})}}
@@ -241,7 +246,7 @@ function voiceFile(i,f){if(!f)return;
 function liveSwitch(i,el){const x=CFG.profiles[i];if(el.checked&&!confirm('Справжні повідомлення підуть фанам '+x.name+'. Продовжити?')){el.checked=false;return}setP(i,'test_mode',!el.checked)}
 function drawCfg(){
   $('poll').value=String(CFG.poll_seconds||60);$('fpc').value=CFG.fans_per_cycle||25;$('tgc').value=CFG.tg_chat||'';
-  $('hk').value=(CFG.handoff_keywords||[]).join(', ');
+  $('hk').value=(CFG.handoff_keywords||[]).join(', ');$('brain').checked=!!CFG.brain_on;$('ak').placeholder=CFG.anthropic_key?'Збережено. Встав новий, щоб замінити':'sk-ant-... (або з ~/.secrets)';
   $('om').placeholder=CFG.om_token?'Збережено. Встав новий, щоб замінити':'Встав ключ';$('tgt').placeholder=CFG.tg_token?'Збережено. Встав новий, щоб замінити':'Токен бота';
   const p=(CFG.profiles||[]).map((x,i)=>[x,i]).filter(([x])=>x.id!=='demo');
   $('profiles').innerHTML=p.length?p.map(([x,i])=>`<div class="model">

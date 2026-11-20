@@ -897,12 +897,83 @@ class Chatter:
         self.status = "running" if on else "stopped"
         self.log("Started" if on else "Stopped")
         self.wake.set()
+        self.cfg["auto_run"] = self.running
+        self.save_cfg()
         return {"ok": True, "running": self.running}
 
 
 # --------------------------------------------------------------------------- web
 C = None
-SECRET_FIELDS = ("om_token", "tg_token")
+# --------------------------------------------------------------------------- built-in brain (Claude API)
+BRAIN_MODEL = "claude-sonnet-5-5"
+BRAIN_SYSTEM_TAIL = """
+Answer ONLY with JSON, no prose:
+{"action": "reply" | "handoff" | "skip", "messages": ["..."], "reason": "...", "notes": "...", "heat": 1-10}
+- reply: 1-3 short friendly NON-sexual messages.
+- handoff: anything sexual, content/price/money, distress, possible minor, "are you a bot". reason required.
+- skip: nothing to answer."""
+
+
+def anthropic_key(cfg):
+    k = (cfg.get("anthropic_key") or "").strip()
+    if k:
+        return k
+    try:
+        return open(os.path.expanduser("~/.secrets/anthropic.key")).read().strip()
+    except OSError:
+        return ""
+
+
+class Brain:
+    def __init__(self, chatter):
+        self.c = chatter
+        threading.Thread(target=self.loop, daemon=True).start()
+
+    def loop(self):
+        while True:
+            time.sleep(10)
+            if not (self.c.running and self.c.cfg.get("brain_on")):
+                continue
+            try:
+                for it in self.c.get_inbox(5, from_claude=False):
+                    self.handle(it)
+            except Exception as e:
+                self.c.log(f"Brain error: {e}")
+
+    def ask(self, system, user):
+        key = anthropic_key(self.c.cfg)
+        if not key:
+            raise RuntimeError("no Claude API key - add it in Settings")
+        st, d = http_json("POST", "https://api.anthropic.com/v1/messages",
+                          {"x-api-key": key, "anthropic-version": "2023-06-01"},
+                          {"model": self.c.cfg.get("brain_model") or BRAIN_MODEL, "max_tokens": 400,
+                           "system": system, "messages": [{"role": "user", "content": user}]})
+        if st != 200:
+            raise RuntimeError(f"Claude API {st}: {str(d)[:200]}")
+        txt = "".join(b.get("text", "") for b in d.get("content", []))
+        m = re.search(r"\{.*\}", txt, re.S)
+        return json.loads(m.group(0)) if m else {"action": "skip", "reason": "no JSON"}
+
+    def handle(self, it):
+        pid, fid = it["profile_id"], str(it["fan_id"])
+        t = self.c.tone(pid)
+        system = t["playbook"] + "\n\nHER VOICE (style only):\n" + (t["voice"] or "")[:12000] + BRAIN_SYSTEM_TAIL
+        hist = "\n".join(f"{h.get('from')}: {h.get('text')}" for h in it.get("history", [])[-12:])
+        user = (f"kind: {it.get('kind')}\ntask: {it.get('task', '')}\nfan notes: {it.get('notes', '')}\n"
+                f"chat so far:\n{hist}\n\nnew from fan: {it.get('incoming', '')}")
+        d = self.ask(system, user)
+        act = d.get("action")
+        if act == "reply":
+            r = self.c.send_reply(pid, fid, d.get("messages") or [], "chat", d.get("heat", 3), d.get("notes", ""))
+            if r.get("rejected"):
+                self.c.handoff(pid, fid, f"bot reply blocked: {r.get('reason')}")
+        elif act == "handoff":
+            self.c.handoff(pid, fid, d.get("reason") or "brain decided")
+        else:
+            self.c.skip(pid, fid, d.get("reason", ""))
+
+
+SECRET_FIELDS = ("om_token", "tg_token", "anthropic_key")
 
 
 def public_cfg():
@@ -989,7 +1060,7 @@ class H(BaseHTTPRequestHandler):
                     for k, v in b.items():
                         if k in SECRET_FIELDS and v in ("", "set"):
                             continue
-                        if k in ("om_token", "tg_token", "tg_chat", "poll_seconds", "fans_per_cycle", "handoff_keywords", "profiles", "report_hour"):
+                        if k in ("om_token", "tg_token", "tg_chat", "poll_seconds", "fans_per_cycle", "handoff_keywords", "profiles", "report_hour", "anthropic_key", "brain_on", "brain_model"):
                             C.cfg[k] = v
                 C.save_cfg()
                 return self.send(200, {"ok": True})
@@ -1042,6 +1113,9 @@ class H(BaseHTTPRequestHandler):
 def main():
     global C
     C = Chatter()
+    Brain(C)
+    if C.cfg.get("auto_run"):
+        C.set_running(True)
     C.log(f"DUCK AI Chatter on http://127.0.0.1:{PORT}")
     ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
 

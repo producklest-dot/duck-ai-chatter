@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>com.duck.ai-chatter</string>
+<key>ProgramArguments</key><array><string>/Users/lest/.duck-ai-chatter-venv/bin/python</string><string>/Users/lest/Apps/duck-ai-chatter/chatter.py</string></array>
+<key>WorkingDirectory</key><string>/Users/lest/Apps/duck-ai-chatter</string>
+<key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
+<key>StandardOutPath</key><string>/Users/lest/Library/Logs/duck-ai-chatter.log</string>
+<key>StandardErrorPath</key><string>/Users/lest/Library/Logs/duck-ai-chatter.log</string>
+</dict></plist>
