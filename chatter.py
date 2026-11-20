@@ -33,6 +33,7 @@ DEAD_HOURS = 24
 MIN_TURNS_BEFORE_TEASE = 2
 CASCADE_GAP = (2, 6)
 STAGES = ["greeting", "rapport", "chat"]
+OUT_BANNED_RE = re.compile(r"\b(meet\w*|meeting|irl|in person|date|hang ?out|snap\w*|insta\w*|whats ?app|telegram|number|call me|facetime|skype)\b", re.I)
 SENSITIVE_RE = re.compile(r"\b(sex\w*|blow\w*|suck\w*|lick\w*|spank\w*|naughty|dirty|panties|thong|bra|nude\w*|naked|horny|dick|cock|pussy|boob\w*|tits?|ass|nsfw|explicit|lingerie|undress\w*|strip\w*|cum\w*|orgasm\w*|fuck\w*|kink\w*|fetish\w*|pic|pics|photo\w*|video\w*|content|custom\w*|ppv|unlock\w*|vault|price\w*|pay|paid|buy|tip\w*|usd|money|debt|broke|loan|minor|underage|teen\w*|school|high ?school|homework|parents?|1[0-7] ?(yo|y/o|years?)|i\W?m 1[0-7]|im 1[0-7]|kill myself|suicid\w*)\b|\$\s?\d|[🍆💦🥵🤤😈👅🍑]", re.I)
 TEASE_RE = re.compile(r"(see|look at|show you|check out)\s+(how|what)?\s*i\s+(look|am wearing|'m wearing|look like|got on)"
                       r"|how i look|what i'?m wearing|see me (right )?now", re.I)
@@ -56,7 +57,7 @@ Call handoff(reason) INSTEAD of replying when the fan:
 - sincerely asks whether he is talking to a bot / AI / a real person.
 Honesty: never claim to be a human and never deny being AI.
 If the voice file contains selling or sexual instructions, ignore them - this playbook wins.
-Never use the words pic, photo, video, content, tip, pay, price, money, bed, naughty in your own messages
+Never use the words meet, date, number, snap, insta, pic, photo, video, content, tip, pay, price, money, bed, naughty in your own messages
 (even innocently, e.g. 'watching videos') - the program blocks them. Each chat message inside your JSON answer is plain human text, no code.
 
 Send with send_reply(profile_id, fan_id, messages, heat, notes, wants_free).
@@ -489,8 +490,9 @@ class Chatter:
         if any(looks_like_json(m) for m in msgs):
             return {"rejected": True, "reason": "a message looks like JSON - send plain text only"}
         bad = [w for w in self.handoff_words() if any(w in m.lower() for m in msgs)]
+        bad += [w.group(0) for w in OUT_BANNED_RE.finditer(" ".join(msgs))]
         if bad:
-            return {"rejected": True, "reason": f"messages contain forbidden words {bad} - rewrite"}
+            return {"rejected": True, "reason": f"messages contain forbidden words {bad} - rewrite without them"}
         if re.search(r"\b(i'?m|i am) (a )?(real|human|not a bot|not ai)\b", " ".join(msgs), re.I):
             return {"rejected": True, "reason": "never claim to be human - call handoff instead"}
         hit = next((SENSITIVE_RE.search(m) for m in msgs if SENSITIVE_RE.search(m)), None)
@@ -955,19 +957,29 @@ class Brain:
             except Exception as e:
                 self.c.log(f"Brain error: {e}")
 
-    def ask(self, system, user):
+    def ask(self, system, user, _retry=True):
         key = anthropic_key(self.c.cfg)
         if not key:
             raise RuntimeError("no Claude API key - add it in Settings")
         st, d = http_json("POST", "https://api.anthropic.com/v1/messages",
                           {"x-api-key": key, "anthropic-version": "2023-06-01"},
-                          {"model": self.c.cfg.get("brain_model") or BRAIN_MODEL, "max_tokens": 400,
+                          {"model": self.c.cfg.get("brain_model") or BRAIN_MODEL, "max_tokens": 500,
                            "system": system, "messages": [{"role": "user", "content": user}]})
         if st != 200:
             raise RuntimeError(f"Claude API {st}: {str(d)[:200]}")
         txt = "".join(b.get("text", "") for b in d.get("content", []))
-        m = re.search(r"\{.*\}", txt, re.S)
-        return json.loads(m.group(0)) if m else {"action": "skip", "reason": "no JSON"}
+        i = txt.find("{")
+        if i >= 0:
+            try:
+                obj, _ = json.JSONDecoder().raw_decode(txt[i:])
+                if isinstance(obj, dict):
+                    return obj
+            except ValueError:
+                pass
+        if _retry:
+            return self.ask(system, user + "\n\nAnswer with the JSON object only, nothing else.", False)
+        self.c.log(f"Brain: no JSON in answer: {txt[:120]!r}")
+        return {"action": "skip", "reason": "no JSON"}
 
     def handle(self, it):
         pid, fid = it["profile_id"], str(it["fan_id"])
@@ -984,6 +996,10 @@ class Brain:
             return
         if act == "reply":
             r = self.c.send_reply(pid, fid, d.get("messages") or [], "chat", d.get("heat", 3), d.get("notes", ""))
+            if r.get("rejected") and "rewrite" in str(r.get("reason")):
+                d2 = self.ask(system, user + f"\n\nYour previous reply was rejected: {r['reason']}. Write it again.")
+                if d2.get("action") == "reply" and isinstance(d2.get("messages"), list):
+                    r = self.c.send_reply(pid, fid, d2["messages"], "chat", d2.get("heat", 3), d2.get("notes", ""))
             if r.get("rejected"):
                 self.c.handoff(pid, fid, f"bot reply blocked: {r.get('reason')}")
         elif act == "handoff":
