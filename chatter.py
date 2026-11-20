@@ -33,7 +33,7 @@ DEAD_HOURS = 24
 MIN_TURNS_BEFORE_TEASE = 2
 CASCADE_GAP = (2, 6)
 STAGES = ["greeting", "rapport", "chat"]
-SENSITIVE_RE = re.compile(r"\b(sex\w*|blow\w*|suck\w*|lick\w*|spank\w*|ride|riding|naughty|dirty|panties|thong|bra|nude\w*|naked|horny|dick|cock|pussy|boob\w*|tits?|ass|nsfw|explicit|lingerie|undress\w*|strip\w*|cum\w*|orgasm\w*|fuck\w*|kink\w*|fetish\w*|bed|wet|hard|touch\w*|pic|pics|photo\w*|video\w*|content|custom\w*|ppv|unlock\w*|vault|price\w*|pay|paid|buy|tip\w*|usd|money|debt|broke|loan|rent|minor|underage|teen\w*|school|high ?school|class|homework|parents?|mom|dad|1[0-7] ?(yo|y/o|years?)|i\W?m 1[0-7]|im 1[0-7]|kill myself|suicid\w*)\b|\$\s?\d|[🍆💦🥵🤤😈👅🍑]", re.I)
+SENSITIVE_RE = re.compile(r"\b(sex\w*|blow\w*|suck\w*|lick\w*|spank\w*|naughty|dirty|panties|thong|bra|nude\w*|naked|horny|dick|cock|pussy|boob\w*|tits?|ass|nsfw|explicit|lingerie|undress\w*|strip\w*|cum\w*|orgasm\w*|fuck\w*|kink\w*|fetish\w*|pic|pics|photo\w*|video\w*|content|custom\w*|ppv|unlock\w*|vault|price\w*|pay|paid|buy|tip\w*|usd|money|debt|broke|loan|minor|underage|teen\w*|school|high ?school|homework|parents?|1[0-7] ?(yo|y/o|years?)|i\W?m 1[0-7]|im 1[0-7]|kill myself|suicid\w*)\b|\$\s?\d|[🍆💦🥵🤤😈👅🍑]", re.I)
 TEASE_RE = re.compile(r"(see|look at|show you|check out)\s+(how|what)?\s*i\s+(look|am wearing|'m wearing|look like|got on)"
                       r"|how i look|what i'?m wearing|see me (right )?now", re.I)
 DEFAULT_HANDOFF = ["meet up", "meet me", "phone number", "whatsapp", "telegram", "snapchat", "my address",
