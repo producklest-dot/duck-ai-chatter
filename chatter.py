@@ -494,7 +494,7 @@ class Chatter:
         bad += [w.group(0) for w in OUT_BANNED_RE.finditer(" ".join(msgs))]
         low_all = " ".join(msgs).lower()
         never = list(self.cfg.get("learned_restricted", [])) + list(self.cfg.get("blocked_words") or default_blocked_words())
-        bad += [w for w in never if re.search(r"(?<![\w])" + re.escape(w) + r"(?![\w])", low_all)]
+        bad += blocked_hits(" ".join(msgs), never)
         bad = list(dict.fromkeys(bad))
         if bad:
             return {"rejected": True, "reason": f"messages contain forbidden words {bad} - rewrite without them"}
@@ -942,6 +942,33 @@ Answer ONLY with JSON, no prose:
 - skip: nothing to answer."""
 
 
+LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s", "!": "i", "|": "l", "€": "e"})
+
+
+def normalize_text(t):
+    """Undo common filter-dodging: leetspeak, s.p.a.c.e.d letters, sttretched letters."""
+    t = str(t).lower().translate(LEET)
+    t = re.sub(r"\b(?:[a-z][\s._*\-]{1,2}){2,}[a-z]\b", lambda m: re.sub(r"[\s._*\-]", "", m.group(0)), t)
+    t = re.sub(r"([a-z])\1{2,}", r"\1\1", t)
+    return t
+
+
+def blocked_hits(text, words):
+    raw = str(text).lower()
+    norm = normalize_text(text)
+    squash = re.sub(r"[^a-z]", "", norm)
+    hits = []
+    for w in words:
+        pat = r"(?<![\w])" + re.escape(w) + (r"(?:s|es|ed|d|ing|z|er|ers)?" if w[-1:].isalpha() and len(w) > 3 else "") + r"(?![\w])"
+        if re.search(pat, raw) or re.search(pat, norm):
+            hits.append(w)
+        elif len(w) >= 6 and w.isalpha() and w in squash and w not in raw.replace(" ", ""):
+            hits.append(w)
+        elif not w.isascii() and w in raw:
+            hits.append(w)
+    return hits
+
+
 def default_blocked_words():
     try:
         txt = open(os.path.join(APP_DIR, "blocked_words.txt"), encoding="utf-8").read()
@@ -987,7 +1014,7 @@ class Brain:
             raise RuntimeError("no Claude API key - add it in Settings")
         st, d = http_json("POST", "https://api.anthropic.com/v1/messages",
                           {"x-api-key": key, "anthropic-version": "2023-06-01"},
-                          {"model": self.c.cfg.get("brain_model") or BRAIN_MODEL, "max_tokens": 500,
+                          {"model": self.c.cfg.get("brain_model") or BRAIN_MODEL, "max_tokens": 1200,
                            "system": system, "messages": [{"role": "user", "content": user}]})
         if st != 200:
             raise RuntimeError(f"Claude API {st}: {str(d)[:200]}")
@@ -1002,7 +1029,7 @@ class Brain:
                 pass
         if _retry:
             return self.ask(system, user + "\n\nAnswer with the JSON object only, nothing else.", False)
-        self.c.log(f"Brain: no JSON in answer: {txt[:120]!r}")
+        self.c.log(f"Brain: no JSON ({d.get('stop_reason')}): {txt[:120]!r}")
         return {"action": "skip", "reason": "no JSON"}
 
     def handle(self, it):
