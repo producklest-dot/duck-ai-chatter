@@ -165,8 +165,11 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
       <option value="30">30 секунд</option><option value="60">1 хвилину</option><option value="120">2 хвилини</option><option value="300">5 хвилин</option></select>
     <label class="f">Скільки чатів перевіряти за раз</label>
     <input id="fpc" type="number" min="5" max="100" onchange="saveCfg({fans_per_cycle:+this.value}).then(()=>toast('Збережено'))">
-    <label class="f">Стоп-слова</label>
-    <p class="hint">Якщо фан напише одне з них, чат іде людині. Через кому.</p>
+    <label class="f">Бот ніколи не пише</label>
+    <p class="hint">Фан може писати ці слова, бот — ні. Якщо бот їх напише, повідомлення не піде, і він перепише відповідь. Через кому. Порожньо = стандартний список (300+ слів).</p>
+    <textarea id="bw" rows="6" onchange="saveCfg({blocked_words:this.value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean)}).then(()=>toast('Збережено'))"></textarea>
+    <label class="f">Віддати людині</label>
+    <p class="hint">Якщо ФАН напише одне з них, бот замовкає і чат іде людині. Тільки небезпечне. Через кому.</p>
     <textarea id="hk" rows="3" onchange="saveCfg({handoff_keywords:this.value.split(',').map(s=>s.trim()).filter(Boolean)}).then(()=>toast('Збережено'))"></textarea>
   </div>
 </section>
@@ -200,7 +203,7 @@ function voiceFile(i,f){if(!f)return;
 function liveSwitch(i,el){const x=CFG.profiles[i];if(el.checked&&!confirm('Справжні повідомлення підуть фанам '+x.name+'. Продовжити?')){el.checked=false;return}setP(i,'test_mode',!el.checked)}
 function drawCfg(){
   $('poll').value=String(CFG.poll_seconds||60);$('fpc').value=CFG.fans_per_cycle||25;$('tgc').value=CFG.tg_chat||'';
-  $('hk').value=(CFG.handoff_keywords||[]).join(', ');$('brain').checked=!!CFG.brain_on;$('ak').placeholder=CFG.anthropic_key?'Збережено. Встав новий, щоб замінити':'sk-ant-... (або з ~/.secrets)';
+  $('hk').value=(CFG.handoff_keywords||[]).join(', ');$('bw').value=(CFG.blocked_words&&CFG.blocked_words.length?CFG.blocked_words:(CFG.default_blocked_words||[])).join(', ');$('brain').checked=!!CFG.brain_on;$('ak').placeholder=CFG.anthropic_key?'Збережено. Встав новий, щоб замінити':'sk-ant-... (або з ~/.secrets)';
   $('om').placeholder=CFG.om_token?'Збережено. Встав новий, щоб замінити':'Встав ключ';$('tgt').placeholder=CFG.tg_token?'Збережено. Встав новий, щоб замінити':'Токен бота';
   const p=(CFG.profiles||[]).map((x,i)=>[x,i]).filter(([x])=>x.id!=='demo');
   $('profiles').innerHTML=p.length?p.map(([x,i])=>`<div class="model">

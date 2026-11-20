@@ -458,8 +458,9 @@ class Chatter:
     def tone(self, pid):
         p = self.profile(pid)
         voice = (p.get("voice") or "").strip() or read_tone(p.get("tone_file", ""))
+        never = list(self.cfg.get("learned_restricted", [])) + list(self.cfg.get("blocked_words") or default_blocked_words())
         return {"profile": p["name"], "username": p.get("username", ""), "voice": voice,
-                "playbook": PLAYBOOK}
+                "playbook": PLAYBOOK + "\nWords and phrases you must NEVER write (the fan may use them, you may not):\n" + ", ".join(never)}
 
     def send_reply(self, pid, fid, messages, stage="", heat=0, notes="", asked_to_see=False,
                    buying_intent=False, wants_free=False):
@@ -492,7 +493,9 @@ class Chatter:
         bad = [w for w in self.handoff_words() if any(w in m.lower() for m in msgs)]
         bad += [w.group(0) for w in OUT_BANNED_RE.finditer(" ".join(msgs))]
         low_all = " ".join(msgs).lower()
-        bad += [w for w in self.cfg.get("learned_restricted", []) if re.search(r"\b" + re.escape(w) + r"\b", low_all)]
+        never = list(self.cfg.get("learned_restricted", [])) + list(self.cfg.get("blocked_words") or default_blocked_words())
+        bad += [w for w in never if re.search(r"(?<![\w])" + re.escape(w) + r"(?![\w])", low_all)]
+        bad = list(dict.fromkeys(bad))
         if bad:
             return {"rejected": True, "reason": f"messages contain forbidden words {bad} - rewrite without them"}
         if re.search(r"\b(i'?m|i am) (a )?(real|human|not a bot|not ai)\b", " ".join(msgs), re.I):
@@ -939,6 +942,19 @@ Answer ONLY with JSON, no prose:
 - skip: nothing to answer."""
 
 
+def default_blocked_words():
+    try:
+        txt = open(os.path.join(APP_DIR, "blocked_words.txt"), encoding="utf-8").read()
+    except OSError:
+        return []
+    words = []
+    for line in txt.splitlines():
+        if line.strip().startswith("#"):
+            continue
+        words += [w.strip().lower() for w in line.split(",") if w.strip()]
+    return list(dict.fromkeys(words))
+
+
 def anthropic_key(cfg):
     k = (cfg.get("anthropic_key") or "").strip()
     if k:
@@ -1024,6 +1040,7 @@ def public_cfg():
     d = dict(C.cfg)
     for k in SECRET_FIELDS:
         d[k] = ("set" if d.get(k) else "")
+    d["default_blocked_words"] = default_blocked_words()
     return d
 
 
@@ -1104,7 +1121,7 @@ class H(BaseHTTPRequestHandler):
                     for k, v in b.items():
                         if k in SECRET_FIELDS and v in ("", "set"):
                             continue
-                        if k in ("om_token", "tg_token", "tg_chat", "poll_seconds", "fans_per_cycle", "handoff_keywords", "profiles", "report_hour", "anthropic_key", "brain_on", "brain_model"):
+                        if k in ("om_token", "tg_token", "tg_chat", "poll_seconds", "fans_per_cycle", "handoff_keywords", "profiles", "report_hour", "anthropic_key", "brain_on", "brain_model", "blocked_words"):
                             C.cfg[k] = v
                 C.save_cfg()
                 return self.send(200, {"ok": True})
