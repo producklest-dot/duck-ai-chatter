@@ -107,12 +107,12 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
 </div>
 <nav id="nav">
   <button data-t="home" class="on">Головна</button><button data-t="models">Моделі</button>
-  <button data-t="fans">Фани</button><button data-t="mail">Розсилки</button><button data-t="try">Спробувати</button><button data-t="settings">Налаштування</button><button data-t="log">Журнал</button>
+  <button data-t="fans">Фани</button><button data-t="settings">Налаштування</button><button data-t="log">Журнал</button>
 </nav></div>
 <main>
 <section class="tab on" id="t-home">
   <div class="card paper">
-    <h2>Налаштування</h2><p class="sub">П'ять кроків. Виконаний крок стає синім.</p>
+    <h2>Налаштування</h2><p class="sub">Чотири кроки. Виконаний крок стає синім.</p>
     <ol class="steps" id="steps"></ol>
   </div>
   <div class="card">
@@ -139,54 +139,9 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
     <div id="fansTable"></div>
   </div>
 </section>
-<section class="tab" id="t-content">
-  <div class="card full">
-    <div class="row"><div style="flex:1"><h2>Платний контент (PPV)</h2><p class="sub" style="margin:0">Що Claude може запропонувати гарячим фанам. Ціна в доларах; media ID беруться з Vault в OnlyMonster (через кому).</p></div>
-      <select id="vaultModel" style="width:auto" onchange="drawVault()"></select></div>
-    <label class="switch" style="margin-top:12px"><input type="checkbox" id="ppvOn" onchange="setVaultFlag(this.checked)"><i></i>Claude пропонує платний контент гарячим фанам (вимкнено = гарячий фан іде людині)</label>
-    <div id="vault"></div>
-    <div class="row" style="margin-top:12px"><button class="pri" onclick="openVaultPicker()">Підтягнути з Vault</button><button onclick="addVault()">+ Додати вручну</button></div>
-  </div>
-</section>
-<section class="tab" id="t-mail">
-  <div class="card">
-    <h2>Розсилка</h2><p class="sub">Повідомлення групі фанів однієї моделі. Заглушені, передані людині і «хочуть безкоштовно» не отримують.</p>
-    <label class="f">Модель</label><select id="mailModel" onchange="countSeg()"></select>
-    <label class="f">Кому</label>
-    <div class="row"><select id="segStage" onchange="countSeg()" style="flex:1"><option value="">усі стадії</option><option value="greeting">привітання</option><option value="rapport">знайомство</option><option value="flirt">флірт</option><option value="tease">тизер</option></select>
-      <input id="segTag" placeholder="мітка (кит, vip…)" onchange="countSeg()" style="flex:1"></div>
-    <div class="row" style="margin-top:8px"><input id="segSilent" type="number" min="0" placeholder="мовчить днів, від" onchange="countSeg()" style="flex:1">
-      <input id="segSpent" type="number" min="0" placeholder="витратив $, від" onchange="countSeg()" style="flex:1"></div>
-    <p class="hint" id="segCount" style="margin-top:8px">—</p>
-    <label class="f">Як писати</label>
-    <label class="switch"><input type="checkbox" id="mailAI" checked onchange="$('mailPPV').disabled=this.checked"><i></i>Claude пише кожному особисто (вимкнено = всім однаковий текст)</label>
-    <label class="f" id="mailTextLabel">Завдання для Claude / текст</label>
-    <textarea id="mailText" rows="3" placeholder="Напр.: напиши, що в неї сьогодні вихідний і вона нудьгує, запитай як у нього справи"></textarea>
-    <select id="mailPPV" disabled style="display:none"><option value="">без PPV</option></select>
-    <div class="row" style="margin-top:16px"><button class="pri" onclick="sendMail()">Надіслати розсилку</button></div>
-  </div>
-  <div class="card paper">
-    <h2>Звіти</h2><p class="sub">Щовечора в Telegram: відповіді і скільки чатів передано людині, по кожній моделі.</p>
-    <label class="f">Надсилати звіт о</label>
-    <select id="repHour" onchange="saveCfg({report_hour:this.value===''?'':+this.value}).then(()=>toast('Збережено'))"><option value="">не надсилати</option></select>
-    <div class="row" style="margin-top:14px"><button onclick="post('/api/report_now',{}).then(()=>toast('Звіт надіслано в Telegram'))">Надіслати зараз</button></div>
-    <pre id="repPreview" class="log" style="margin-top:14px"></pre>
-  </div>
-</section>
-<section class="tab" id="t-try">
-  <div class="card">
-    <h2>Спробуй як фан</h2><p class="sub">Пиши як фан (англійською). Claude відповідає за демо-модель. В OnlyFans нічого не йде.</p>
-    <div class="chat" id="chat"></div>
-    <div class="row" style="margin-top:10px">
-      <input id="demotxt" style="flex:1" placeholder="hey gorgeous, how's your day?" onkeydown="if(event.key==='Enter')sendDemo()">
-      <button class="pri" onclick="sendDemo()">Надіслати</button><button onclick="post('/api/demo',{text:'__reset__'})">Новий чат</button></div>
-  </div>
-  <div class="card paper">
-    <h2>Що варто перевірити</h2><p class="sub">Натисни, щоб надіслати.</p>
-    <div id="ideas" style="display:flex;flex-direction:column;gap:8px"></div>
-    <p class="note" style="margin-top:18px">Claude відповідає на наступному проході (щохвилини). Треба одразу? Напиши Claude у його вікні: <b>«зроби прохід чатера»</b>.</p>
-  </div>
-</section>
+
+
+
 <section class="tab" id="t-settings">
   <div class="card">
     <h2>Підключення</h2>
@@ -221,7 +176,7 @@ tr.fr{cursor:pointer}tr.fr:hover td{background:var(--field)}
 <div class="toast" id="toast"></div>
 <script>
 let S={},CFG={},SETUP={};
-const $=id=>document.getElementById(id);
+const $=id=>document.getElementById(id)||document.createElement('div');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function get(u){return (await fetch(u)).json()}
 async function post(u,b){const j=await (await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)})).json();refresh();return j}
@@ -266,8 +221,7 @@ function drawSetup(){
     [s.onlymonster,'Підключи OnlyMonster','Щоб програма читала і відповідала в чатах.',`<button onclick="tab('settings')">Додати ключ</button>`],
     [s.active>0,'Обери моделі',s.models?`Увімкнено ${s.active} з ${s.models}`:'Завантаж моделі і ввімкни бота.',`<button onclick="tab('models')">Моделі</button>`],
     [s.voice,'Дай кожній моделі голос','Щоб Claude писав як вона.',`<button onclick="tab('models')">Додати голос</button>`],
-    [s.claude_connected,'Підключи Claude','Одна кнопка. Потім один раз перезапусти Claude.',`<button class="pri" onclick="connectClaude()">Підключити</button>`],
-    [s.claude_working,'Запусти зміну Claude','Скопіюй команду і встав у Claude. Він відповідатиме фанам щохвилини.',`<button class="pri" onclick="copyShift()">Скопіювати команду</button>`]];
+    [!!CFG.brain_on,'Увімкни мозок','Налаштування → «Відповідати самій». Ключ Claude API вже є.',`<button class="pri" onclick="tab('settings')">Відкрити</button>`]];
   $('steps').innerHTML=list.map(([ok,t,d,b],k)=>`<li class="${ok?'done':''}"><span class="n"><span>${k+1}</span></span><div class="t">${t}<div>${d}</div></div>${ok&&k<4?'':b}</li>`).join('')
     +(s.telegram?'':`<li><span class="n"><span>+</span></span><div class="t">Сповіщення в Telegram (за бажанням)<div>Гарячі фани прямо на телефон.</div></div><button onclick="tab('settings')">Налаштувати</button></li>`);
 }
@@ -293,7 +247,7 @@ async function refresh(){
   const ago=S.claude_seen_ago_s,w=!!(CFG&&CFG.brain_on)||(ago!=null&&ago<300);
   $('claude').textContent=w?'Мозок увімкнено':'Мозок вимкнено';$('claude').className='pill '+(w?'on':'off');
   const t=S.today||{};
-  $('stats').innerHTML=[['replies','Відповідей'],['leads','Гарячих фанів'],['handoff','Передано людині'],['free','Хотіли безкоштовно'],['purchases','Покупок'],['broadcast','Розсилка']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('');
+  $('stats').innerHTML=[['replies','Відповідей'],['handoff','Передано людині']].map(([k,l])=>`<div><b>${t[k]||0}</b><span>${l}</span></div>`).join('');
   $('log').textContent=(S.log||[]).slice().reverse().join('\n');
   const inb=await get('/api/inbox?limit=20&ui=1');
   $('inbox').innerHTML=inb.length?inb.map(x=>`<div class="inb"><b>${esc(x.profile)}</b> <span class="hint">фан ${esc(x.fan_id)}</span><br>${esc(x.incoming)}</div>`).join(''):'<p class="empty">Ніхто не чекає.</p>';
