@@ -491,6 +491,8 @@ class Chatter:
             return {"rejected": True, "reason": "a message looks like JSON - send plain text only"}
         bad = [w for w in self.handoff_words() if any(w in m.lower() for m in msgs)]
         bad += [w.group(0) for w in OUT_BANNED_RE.finditer(" ".join(msgs))]
+        low_all = " ".join(msgs).lower()
+        bad += [w for w in self.cfg.get("learned_restricted", []) if re.search(r"\b" + re.escape(w) + r"\b", low_all)]
         if bad:
             return {"rejected": True, "reason": f"messages contain forbidden words {bad} - rewrite without them"}
         if re.search(r"\b(i'?m|i am) (a )?(real|human|not a bot|not ai)\b", " ".join(msgs), re.I):
@@ -522,8 +524,14 @@ class Chatter:
                 st, d = om.send(pid, fid, text)
                 if st == 400 and d.get("code") == "RESTRICTED_WORDS_DETECTED":
                     words = d.get("details", {}).get("words", [])
+                    learned = self.cfg.setdefault("learned_restricted", [])
+                    new_w = [str(w).lower() for w in words if str(w).lower() not in learned]
+                    if new_w:
+                        learned.extend(new_w)
+                        self.save_cfg()
+                        self.log(f"Learned OnlyMonster restricted words: {new_w}")
                     return {"rejected": True, "reason": f"OnlyFans blocked words {words}; already sent {sent}. "
-                            "Send only the remaining messages without those words."}
+                            "Send only the remaining messages, rewrite without those words."}
                 if st in (403, 404):
                     self.pstate(pid)["dead"][fid] = time.time()
                     self.state["inbox"].pop(key, None)
@@ -996,7 +1004,8 @@ class Brain:
             return
         if act == "reply":
             r = self.c.send_reply(pid, fid, d.get("messages") or [], "chat", d.get("heat", 3), d.get("notes", ""))
-            if r.get("rejected") and "rewrite" in str(r.get("reason")):
+            rs = str(r.get("reason"))
+            if r.get("rejected") and "rewrite" in rs and ("already sent" not in rs or "already sent []" in rs):
                 d2 = self.ask(system, user + f"\n\nYour previous reply was rejected: {r['reason']}. Write it again.")
                 if d2.get("action") == "reply" and isinstance(d2.get("messages"), list):
                     r = self.c.send_reply(pid, fid, d2["messages"], "chat", d2.get("heat", 3), d2.get("notes", ""))
