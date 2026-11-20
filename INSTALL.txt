@@ -1,0 +1,16 @@
+DUCK AI Chatter - install (macOS)
+
+1. Unzip. Move the folder "duck-ai-chatter" to your Applications or Documents folder (keep it together).
+2. Open "DUCK AI Chatter.app". First start installs components (1-2 min, needs Python 3 from python.org).
+   If macOS blocks it: right-click the app -> Open -> Open.
+3. Settings tab:
+   - OnlyMonster key (OnlyMonster -> Dashboard -> API)
+   - Claude API key (console.anthropic.com -> API keys)
+   - optional: Telegram bot token + chat id for "needs a human" alerts
+4. Models tab: "Load models", switch the bot on for your account, paste your voice (how you write).
+   Keep "Write to real fans" OFF first - replies go only to the Log. Check the Log, then switch it on.
+5. Press "Turn bot on" and enable "Answer by itself".
+
+What the bot does: only light, friendly, non-sexual small talk. It never sells.
+Anything sexual, content/price/tips, money trouble, age hints, media from fans or "are you a bot?"
+is handed to you (the bot goes silent in that chat for 48 h).
